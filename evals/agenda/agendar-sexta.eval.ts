@@ -4,7 +4,7 @@ import { includes } from "eve/evals/expect";
 import {
   agendaDbVazia,
   createdTask,
-  currentDateTimeDb,
+  currentDateTime,
   localDateTimeToUtc,
 } from "../fixtures/agenda";
 
@@ -14,7 +14,7 @@ export default defineEval({
   tags: ["agenda", "fast"],
   async test(t) {
     const session = await t.session({
-      stubs: [currentDateTimeDb, agendaDbVazia, localDateTimeToUtc, createdTask],
+      stubs: [currentDateTime, agendaDbVazia, localDateTimeToUtc, createdTask],
     });
 
     const turn = await session.send(

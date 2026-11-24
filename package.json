@@ -19,7 +19,6 @@
   "dependencies": {
     "@ai-sdk/openai": "^4.0.121",
     "@libsql/client": "^0.18.0",
-    "@vercel/connect": "2.7.0",
     "ai": "^7.0.172",
     "eve": "^1.0.2",
     "zod": "4.6.7"

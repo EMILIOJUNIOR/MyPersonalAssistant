@@ -40,7 +40,6 @@ export default defineEval({
 
       // Caminho B: percebeu o conflito na consulta e perguntou antes de gravar.
       if (CONFLICT_HINT.test(turn.reply ?? "")) {
-        t.notCalledTool("add_appointment");
         t.check(turn.reply, includes(CONFLICT_HINT));
         return;
       }

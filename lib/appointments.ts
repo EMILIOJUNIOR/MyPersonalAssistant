@@ -74,16 +74,6 @@ function rowToAppointment(row: Record<string, unknown>): Appointment {
   return appointment;
 }
 
-function overlaps(
-  start: string,
-  end: string,
-  otherStart: string,
-  otherEnd: string,
-): boolean {
-  return Date.parse(start) < Date.parse(otherEnd) &&
-    Date.parse(otherStart) < Date.parse(end);
-}
-
 async function conflicts(
   start: string,
   end: string,

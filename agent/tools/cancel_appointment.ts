@@ -1,7 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
-import { appointmentSchema } from "../lib/agenda";
+import { appointmentSchema } from "../lib/appointment-schema";
 import { cancelAppointment as cancelTursoAppointment } from "../../lib/appointments";
 
 export default defineTool({

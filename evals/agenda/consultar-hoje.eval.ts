@@ -3,7 +3,7 @@ import { includes } from "eve/evals/expect";
 
 import {
   agendaDbHoje,
-  currentDateTimeDb,
+  currentDateTime,
 } from "../fixtures/agenda";
 
 export default defineEval({
@@ -12,7 +12,7 @@ export default defineEval({
   tags: ["agenda", "fast"],
   async test(t) {
     const session = await t.session({
-      stubs: [currentDateTimeDb, agendaDbHoje],
+      stubs: [currentDateTime, agendaDbHoje],
     });
 
     const turn = await session.send("O que eu tenho hoje?");

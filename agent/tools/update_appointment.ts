@@ -1,7 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
-import { appointmentSchema, isoDateTime } from "../lib/agenda";
+import { appointmentSchema, isoDateTime } from "../lib/appointment-schema";
 import { updateAppointment as updateTursoAppointment } from "../../lib/appointments";
 
 export default defineTool({

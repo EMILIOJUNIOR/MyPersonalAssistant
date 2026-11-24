@@ -11,7 +11,7 @@ import type {
   ToolStub,
 } from "eve/evals";
 
-/** Shape mirrors agent/lib/agenda/types.ts; the stub response is validated by the tool schema. */
+/** Shape mirrors the appointment tool schema used by the Turso-backed agenda. */
 export type FixtureAppointment = {
   id: string;
   title: string;
@@ -61,20 +61,6 @@ export const reuniao = appointment({
 
 export const currentDateTime: ToolStub = {
   id: "agora",
-  tool: "current_datetime",
-  outcome: {
-    response: {
-      iso: "2026-11-23T12:00:00.000Z",
-      utc: "Mon, 23 Nov 2026 12:00:00 GMT",
-      date: "23/11/2026",
-      weekday: "segunda-feira",
-      timezoneOffsetMinutes: -180,
-    },
-  },
-};
-
-export const currentDateTimeDb: ToolStub = {
-  id: "agora-db",
   tool: "get_current_datetime",
   outcome: {
     response: {
