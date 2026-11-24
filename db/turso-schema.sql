@@ -167,3 +167,6 @@ VALUES ('0005_multitenancy.sql', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
 
 INSERT OR IGNORE INTO _migrations (id, applied_at)
 VALUES ('0006_tenant_preferences.sql', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+
+INSERT OR IGNORE INTO _migrations (id, applied_at)
+VALUES ('0007_all_appointment_reminders.sql', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));

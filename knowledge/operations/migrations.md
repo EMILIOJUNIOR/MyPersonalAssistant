@@ -10,7 +10,7 @@ generated: { by: opencode/gpt-6-luna, at: 2026-11-19T12:19:15Z }
 
 # Como funciona
 
-`0005_multitenancy.sql` adiciona `tenant_id` às tabelas de domínio. `0006_tenant_preferences.sql` cria o nome de tratamento por tenant e inicializa o tenant existente.
+`0005_multitenancy.sql` adiciona `tenant_id` às tabelas de domínio. `0006_tenant_preferences.sql` cria o nome de tratamento por tenant. `0007_all_appointment_reminders.sql` cria os lembretes dos compromissos existentes.
 
 - `db/migrations/*.sql` são aplicadas em ordem lexicográfica.
 - `scripts/migrate.ts` cria `_migrations`, roda cada arquivo uma vez em transação e registra o nome.

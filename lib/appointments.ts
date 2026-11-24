@@ -31,7 +31,6 @@ export interface AppointmentUpdate extends Partial<AppointmentInput> {
 }
 
 const appointmentCache = new Map<string, Appointment>();
-const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
 
 export function cachedAppointment(id: string): Appointment | null {
   return appointmentCache.get(id) ?? null;
@@ -285,7 +284,7 @@ export async function scheduleAppointmentReminders(
   await clearAppointmentReminders(tenantId, appointmentId);
 
   const startMs = Date.parse(start);
-  if (startMs - Date.now() <= FIVE_DAYS_MS) return;
+  const nowMs = Date.now();
 
   const createdAt = nowIso();
   const reminders = [
@@ -294,6 +293,9 @@ export async function scheduleAppointmentReminders(
   ];
 
   for (const reminder of reminders) {
+    const remindAt = startMs - reminder.offset;
+    if (remindAt <= nowMs) continue;
+
     await getDb().execute({
       sql: `INSERT INTO appointment_reminders
             (id, tenant_id, appointment_id, kind, remind_at, sent_at, created_at)
@@ -303,7 +305,7 @@ export async function scheduleAppointmentReminders(
         tenantId,
         appointmentId,
         reminder.kind,
-        new Date(startMs - reminder.offset).toISOString(),
+        new Date(remindAt).toISOString(),
         createdAt,
       ],
     });
