@@ -13,6 +13,13 @@ CREATE TABLE IF NOT EXISTS _migrations (
   applied_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS tenant_preferences (
+  tenant_id  TEXT PRIMARY KEY,
+  user_name  TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS projects (
   id          TEXT PRIMARY KEY,
   tenant_id   TEXT NOT NULL,
@@ -157,3 +164,6 @@ VALUES ('0004_appointment_reminders.sql', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 
 INSERT OR IGNORE INTO _migrations (id, applied_at)
 VALUES ('0005_multitenancy.sql', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+
+INSERT OR IGNORE INTO _migrations (id, applied_at)
+VALUES ('0006_tenant_preferences.sql', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));

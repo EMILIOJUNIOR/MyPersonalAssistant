@@ -6,7 +6,7 @@ import { tenantId } from "../lib/tenant";
 
 export default defineTool({
   description:
-    "Remove da memória permanente as notas que contenham o texto informado. Use quando o MilhoJr disser que algo mudou, que não vale mais, ou pedir para esquecer. A remoção é definitiva.",
+    "Remove da memória permanente as notas que contenham o texto informado. Use quando o usuário disser que algo mudou, que não vale mais, ou pedir para esquecer. A remoção é definitiva.",
   inputSchema: z.object({
     texto: z
       .string()

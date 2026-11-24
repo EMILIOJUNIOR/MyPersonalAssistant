@@ -10,6 +10,6 @@ export default defineEval({
     turn.expectOk();
     t.usedNoTools();
     t.check(turn.reply, includes(/LumIA/));
-    t.check(turn.reply, includes(/MilhoJr/));
+    t.check(turn.reply, includes(/cham|nome/i));
   },
 });

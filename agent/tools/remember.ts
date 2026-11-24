@@ -6,7 +6,7 @@ import { tenantId } from "../lib/tenant";
 
 export default defineTool({
   description:
-    "Guarda uma nota curta na memória permanente da LumIA, que é relida no início de cada conversa. Use para preferências estáveis, fatos sobre o MilhoJr e pendências que valem lembrar depois. Não guarde segredos, senhas, tokens nem detalhes passageiros da conversa atual.",
+    "Guarda uma nota curta na memória permanente da LumIA, que é relida no início de cada conversa. Use para preferências estáveis, fatos sobre o usuário e pendências que valem lembrar depois. Não guarde segredos, senhas, tokens nem detalhes passageiros da conversa atual.",
   inputSchema: z.object({
     texto: z
       .string()

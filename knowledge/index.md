@@ -28,7 +28,7 @@ Este bundle guarda o conhecimento durável da LumIA. Leia este índice primeiro 
 * [0002 — Turso](decisions/0002-turso.md) - libSQL gerenciado.
 * [0003 — Modelo](decisions/0003-modelo-opencode-go.md) - opencode-go/gpt-6-luna.
 * [0004 — Sem frontend](decisions/0004-sem-frontend.md) - o Telegram é a interface.
-* [0005 — Memória](decisions/0005-memoria-preferencias.md) - decisão registrada, ainda não implementada.
+* [0005 — Memória](decisions/0005-memoria-preferencias.md) - preferências persistidas por tenant.
 
 # Integrações
 

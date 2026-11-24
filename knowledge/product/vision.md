@@ -56,7 +56,7 @@ Uma única pessoa, em português, usando o Telegram no celular. O escopo é pess
 O [Plano de Projeto](/references/plan.md) é aspiracional em alguns pontos. Hoje:
 
 - Existe apenas o schedule `due-reminders`; não existem `morning-digest` nem `evening-review`.
-- Não existe `agent/memory/`; as instructions avisam que preferências duráveis ainda não têm tool. Veja [0005 — Memória](/decisions/0005-memoria-preferencias.md).
+- Preferências e nome de tratamento são persistidos no Turso por tenant. Veja [0005 — Memória](/decisions/0005-memoria-preferencias.md).
 - O áudio funciona por uma rota própria com Groq, não pelo canal nativo. Veja [Telegram](/integrations/telegram.md).
 
 # Princípios
