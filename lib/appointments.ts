@@ -30,6 +30,12 @@ export interface AppointmentUpdate extends Partial<AppointmentInput> {
   status?: AppointmentStatus;
 }
 
+const appointmentCache = new Map<string, Appointment>();
+
+export function cachedAppointment(id: string): Appointment | null {
+  return appointmentCache.get(id) ?? null;
+}
+
 function cleanOptional(value: string | null | undefined): string | null {
   const result = value?.trim();
   return result ? result : null;
@@ -92,7 +98,11 @@ async function conflicts(
     args: [ignoreId ?? null, ignoreId ?? null, end, start],
   });
 
-  return result.rows.map((row) => rowToAppointment(row as Record<string, unknown>));
+  return result.rows.map((row) => {
+    const appointment = rowToAppointment(row as Record<string, unknown>);
+    appointmentCache.set(appointment.id, appointment);
+    return appointment;
+  });
 }
 
 export async function listAppointments(options: {
@@ -137,7 +147,10 @@ export async function getAppointment(id: string): Promise<Appointment | null> {
     args: [id],
   });
   const row = result.rows[0];
-  return row ? rowToAppointment(row as Record<string, unknown>) : null;
+  if (!row) return null;
+  const appointment = rowToAppointment(row as Record<string, unknown>);
+  appointmentCache.set(appointment.id, appointment);
+  return appointment;
 }
 
 export async function createAppointment(
