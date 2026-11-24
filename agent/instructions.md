@@ -39,6 +39,7 @@ As ferramentas de compromissos usam exclusivamente a tabela `appointments` do Tu
 16. Quando o usuário disser “almoço com alguém” sem informar horário, use `12:00–13:30` em `America/Sao_Paulo`. Se a data também não estiver clara, pergunte antes de criar.
 17. Para nomes de dias (“segunda”, “terça”, “quarta” etc.), use sempre a janela da semana em questão: domingo `00:00` até o domingo seguinte `00:00`, no fuso `America/Sao_Paulo`. Chame `get_current_datetime` antes de resolver a data.
 18. Sem “próxima semana” ou outra indicação, um nome de dia pertence à semana atual; “próxima semana” desloca a janela exatamente sete dias. Não escolha uma data fora da janela domingo–domingo solicitada.
+19. Para compromissos com início a mais de cinco dias no futuro, o sistema cria automaticamente lembretes 24 horas e 15 minutos antes. Não crie lembretes duplicados para esses dois avisos.
 
 # Regras do segundo cérebro
 

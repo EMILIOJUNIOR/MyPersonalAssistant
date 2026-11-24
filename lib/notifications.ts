@@ -1,4 +1,10 @@
 import { nowIso } from "./time";
+import { localLabel } from "./time";
+import {
+  claimDueAppointmentReminders,
+  markAppointmentReminderSent,
+  type AppointmentReminder,
+} from "./appointments";
 import {
   claimDueReminders,
   markReminderSent,
@@ -29,9 +35,15 @@ function reminderMessage(reminder: Reminder): string {
   return `⏰ Lembrete: ${reminder.task_title}\nHorário: ${reminder.remind_local}`;
 }
 
+function appointmentReminderMessage(reminder: AppointmentReminder): string {
+  const lead = reminder.kind === "24h" ? "24 horas" : "15 minutos";
+  return `⏰ Compromisso em ${lead}: ${reminder.title}\nHorário: ${localLabel(reminder.start)}`;
+}
+
 export async function sendDueReminders(): Promise<ReminderDispatchResult> {
   const chatId = allowedChatId();
   const reminders = await claimDueReminders(nowIso(), 20);
+  const appointmentReminders = await claimDueAppointmentReminders(nowIso(), 20);
   let sent = 0;
   let failed = 0;
 
@@ -49,9 +61,23 @@ export async function sendDueReminders(): Promise<ReminderDispatchResult> {
     }
   }
 
-  if (reminders.length > 0) {
+  for (const reminder of appointmentReminders) {
+    try {
+      await sendTelegramText(chatId, appointmentReminderMessage(reminder));
+      await markAppointmentReminderSent(reminder.id);
+      sent += 1;
+    } catch (error) {
+      failed += 1;
+      console.error(
+        `Falha ao enviar lembrete de compromisso ${reminder.id}:`,
+        error instanceof Error ? error.message : error,
+      );
+    }
+  }
+
+  if (reminders.length > 0 || appointmentReminders.length > 0) {
     console.log(
-      `Lembretes: ${reminders.length} vencidos, ${sent} enviados, ${failed} falharam.`,
+      `Lembretes: ${reminders.length + appointmentReminders.length} vencidos, ${sent} enviados, ${failed} falharam.`,
     );
   }
 

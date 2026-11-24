@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { getDb } from "./db";
-import { normalizeInstant, parseInstant, nowIso } from "./time";
+import { normalizeInstant, nowIso } from "./time";
 
 export type AppointmentStatus = "confirmed" | "cancelled";
 
@@ -31,6 +31,7 @@ export interface AppointmentUpdate extends Partial<AppointmentInput> {
 }
 
 const appointmentCache = new Map<string, Appointment>();
+const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
 
 export function cachedAppointment(id: string): Appointment | null {
   return appointmentCache.get(id) ?? null;
@@ -190,6 +191,7 @@ export async function createAppointment(
 
   const created = await getAppointment(id);
   if (!created) throw new Error("Compromisso não encontrado após a criação.");
+  await scheduleAppointmentReminders(created.id, created.start);
   return created;
 }
 
@@ -238,6 +240,12 @@ export async function updateAppointment(
     ],
   });
 
+  if (next.status === "confirmed") {
+    await scheduleAppointmentReminders(input.id, range.start);
+  } else {
+    await clearAppointmentReminders(input.id);
+  }
+
   const updated = await getAppointment(input.id);
   if (!updated) throw new Error("Compromisso não encontrado após a atualização.");
   return updated;
@@ -256,8 +264,95 @@ export async function cancelAppointment(id: string, reason?: string): Promise<Ap
     sql: "UPDATE appointments SET status = 'cancelled', notes = ?, updated_at = ? WHERE id = ?",
     args: [notes, nowIso(), id],
   });
+  await clearAppointmentReminders(id);
 
   const cancelled = await getAppointment(id);
   if (!cancelled) throw new Error("Compromisso não encontrado após o cancelamento.");
   return cancelled;
+}
+
+export interface AppointmentReminder {
+  id: string;
+  appointment_id: string;
+  title: string;
+  start: string;
+  kind: "24h" | "15m";
+  remind_at: string;
+  sent_at: string | null;
+}
+
+export async function scheduleAppointmentReminders(
+  appointmentId: string,
+  start: string,
+): Promise<void> {
+  await clearAppointmentReminders(appointmentId);
+
+  const startMs = Date.parse(start);
+  if (startMs - Date.now() <= FIVE_DAYS_MS) return;
+
+  const createdAt = nowIso();
+  const reminders = [
+    { kind: "24h" as const, offset: 24 * 60 * 60 * 1000 },
+    { kind: "15m" as const, offset: 15 * 60 * 1000 },
+  ];
+
+  for (const reminder of reminders) {
+    await getDb().execute({
+      sql: `INSERT INTO appointment_reminders
+            (id, appointment_id, kind, remind_at, sent_at, created_at)
+            VALUES (?, ?, ?, ?, NULL, ?)`,
+      args: [
+        randomUUID(),
+        appointmentId,
+        reminder.kind,
+        new Date(startMs - reminder.offset).toISOString(),
+        createdAt,
+      ],
+    });
+  }
+}
+
+async function clearAppointmentReminders(appointmentId: string): Promise<void> {
+  await getDb().execute({
+    sql: "DELETE FROM appointment_reminders WHERE appointment_id = ?",
+    args: [appointmentId],
+  });
+}
+
+export async function claimDueAppointmentReminders(
+  at = nowIso(),
+  limit = 50,
+): Promise<AppointmentReminder[]> {
+  const result = await getDb().execute({
+    sql: `SELECT r.id, r.appointment_id, r.kind, r.remind_at, r.sent_at,
+                 a.title, a.start_at
+          FROM appointment_reminders r
+          JOIN appointments a ON a.id = r.appointment_id
+          WHERE r.sent_at IS NULL
+            AND r.remind_at <= ?
+            AND a.status = 'confirmed'
+          ORDER BY r.remind_at ASC
+          LIMIT ?`,
+    args: [at, limit],
+  });
+
+  return result.rows.map((row) => ({
+    id: String(row.id),
+    appointment_id: String(row.appointment_id),
+    title: String(row.title),
+    start: String(row.start_at),
+    kind: row.kind as "24h" | "15m",
+    remind_at: String(row.remind_at),
+    sent_at: row.sent_at === null ? null : String(row.sent_at),
+  }));
+}
+
+export async function markAppointmentReminderSent(
+  id: string,
+  at = nowIso(),
+): Promise<void> {
+  await getDb().execute({
+    sql: "UPDATE appointment_reminders SET sent_at = ? WHERE id = ? AND sent_at IS NULL",
+    args: [at, id],
+  });
 }

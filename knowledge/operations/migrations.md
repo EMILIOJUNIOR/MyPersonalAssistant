@@ -22,7 +22,7 @@ Para criar diretamente um banco Turso vazio:
 turso db shell <nome-do-banco> < db/turso-schema.sql
 ```
 
-O arquivo `db/turso-schema.sql` é idempotente, cria o schema final e registra `0001_init.sql`, `0002_knowledge.sql` e `0003_appointments.sql` em `_migrations`. Depois disso, `npm run db:migrate` reconhece essas migrações como aplicadas.
+O arquivo `db/turso-schema.sql` é idempotente, cria o schema final e registra `0001_init.sql`, `0002_knowledge.sql`, `0003_appointments.sql` e `0004_appointment_reminders.sql` em `_migrations`. Depois disso, `npm run db:migrate` reconhece essas migrações como aplicadas.
 
 Para importar a agenda JSON legada sem duplicar registros:
 

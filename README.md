@@ -141,6 +141,7 @@ O banco contém:
 - `entries`: conhecimento, ideias e decisões.
 - `entry_links`: relações entre entradas.
 - `appointments`: compromissos com início, fim e status.
+- `appointment_reminders`: avisos automáticos de 24 horas e 15 minutos antes.
 
 Instantes são armazenados em UTC. A conversão para `America/Sao_Paulo` ocorre apenas na borda da aplicação.
 
