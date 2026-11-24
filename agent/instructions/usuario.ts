@@ -11,12 +11,12 @@ export default defineDynamic(async (ctx) => {
     return defineInstructions({
       role: "user",
       content:
-        "O nome de tratamento deste tenant ainda não está cadastrado. Pergunte exatamente: “Como devo chamá-lo?” Antes de executar outras ações, salvo se o usuário já estiver respondendo essa pergunta.",
+        "Este é o primeiro contato deste tenant. Cumprimente com uma mensagem acolhedora em português, use um emoji de saudação (por exemplo, “Olá! 👋”) e pergunte: “Como você gostaria de ser chamado(a)? 🙂” Não execute outras ações antes de receber o nome, salvo se o usuário já estiver respondendo essa pergunta.",
     });
   }
 
   return defineInstructions({
     role: "user",
-    content: `O usuário prefere ser chamado de “${name}”. Use esse nome naturalmente, sem inventar outro.`,
+    content: `O usuário prefere ser chamado de “${name}”. Use esse nome naturalmente, sem inventar outro. Em respostas de boas-vindas ou apresentação, seja acolhedora e use emojis coerentes, como ✅, 💡, 📋, 📅 e 🔎, sem exagerar.`,
   });
 });
