@@ -1,5 +1,4 @@
 import { defineTool } from "eve/tools";
-import { always } from "eve/tools/approval";
 import { z } from "zod";
 
 import { appointmentSchema, isoDateTime } from "../lib/agenda";
@@ -20,7 +19,6 @@ export default defineTool({
       .describe("Só use true se o usuário autorizou explicitamente o conflito de horário."),
   }),
   outputSchema: z.object({ appointment: appointmentSchema }),
-  approval: always(),
   label: {
     start: ({ title }) => `Agendando ${title}`,
     complete: (_input, output) => `Agendado: ${output.appointment.title} (${output.appointment.id})`,

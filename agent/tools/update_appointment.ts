@@ -1,12 +1,8 @@
 import { defineTool } from "eve/tools";
-import { always } from "eve/tools/approval";
 import { z } from "zod";
 
 import { appointmentSchema, isoDateTime } from "../lib/agenda";
-import {
-  cachedAppointment,
-  updateAppointment as updateTursoAppointment,
-} from "../../lib/appointments";
+import { updateAppointment as updateTursoAppointment } from "../../lib/appointments";
 
 export default defineTool({
   description:
@@ -22,23 +18,6 @@ export default defineTool({
     allowOverlap: z.boolean().default(false),
   }),
   outputSchema: z.object({ appointment: appointmentSchema }),
-  approval: {
-    request: always(),
-    prompt: ({ input }) => {
-      const appointment = cachedAppointment(input.id);
-      const title = appointment?.title ?? `compromisso ${input.id}`;
-      const currentDate = appointment
-        ? new Intl.DateTimeFormat("pt-BR", {
-            dateStyle: "short",
-            timeStyle: "short",
-            timeZone: "America/Sao_Paulo",
-          }).format(new Date(appointment.start))
-        : null;
-      const change = input.start || input.end ? " o horário" : " os dados";
-
-      return `Posso atualizar “${title}”${currentDate ? ` (${currentDate})` : ""}${change}?`;
-    },
-  },
   label: {
     start: () => "Solicitando atualização do compromisso",
     complete: (_input, output) => `Compromisso alterado: ${output.appointment.title}`,
