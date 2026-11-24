@@ -46,6 +46,18 @@ export interface AgendaDay {
   date: string;
   label: string;
   tasks: AgendaTask[];
+  appointments: AgendaAppointment[];
+}
+
+export interface AgendaAppointment {
+  id: string;
+  title: string;
+  start: string;
+  end: string;
+  start_local: string;
+  end_local: string;
+  location: string | null;
+  notes: string | null;
 }
 
 function clampLimit(limit: number | undefined, fallback = 20): number {
@@ -222,12 +234,14 @@ export async function getAgenda(
   fromDateKey: string,
   toDateKey: string,
   includeDone = false,
+  includePast = false,
 ): Promise<{
   from: string;
   to: string;
   start_utc: string;
   end_utc: string;
   days: AgendaDay[];
+  appointments: AgendaAppointment[];
   count: number;
 }> {
   const { start, endExclusive } = localDayRangeUtc(fromDateKey, toDateKey);
@@ -238,6 +252,11 @@ export async function getAgenda(
     "t.status != 'cancelled'",
   ];
   const args: string[] = [start, endExclusive];
+
+  if (!includePast) {
+    conditions.push("t.due_at >= ?");
+    args.push(nowIso());
+  }
 
   if (!includeDone) {
     conditions.push("t.status = 'open'");
@@ -256,6 +275,38 @@ export async function getAgenda(
   const tasks = tasksResult.rows.map((row) =>
     toTaskView(row as Record<string, unknown>),
   );
+
+  const appointmentConditions = [
+    "status = 'confirmed'",
+    "start_at < ?",
+    "end_at > ?",
+  ];
+  const appointmentArgs: string[] = [endExclusive, start];
+
+  if (!includePast) {
+    appointmentConditions.push("end_at > ?");
+    appointmentArgs.push(nowIso());
+  }
+
+  const appointmentsResult = await getDb().execute({
+    sql: `SELECT id, title, start_at, end_at, location, notes
+          FROM appointments
+          WHERE ${appointmentConditions.join(" AND ")}
+          ORDER BY start_at ASC
+          LIMIT 100`,
+    args: appointmentArgs,
+  });
+
+  const appointments: AgendaAppointment[] = appointmentsResult.rows.map((row) => ({
+    id: String(row.id),
+    title: String(row.title),
+    start: String(row.start_at),
+    end: String(row.end_at),
+    start_local: localLabel(String(row.start_at)),
+    end_local: localLabel(String(row.end_at)),
+    location: row.location === null ? null : String(row.location),
+    notes: row.notes === null ? null : String(row.notes),
+  }));
 
   const remindersByTask = new Map<string, AgendaTask["reminders"]>();
 
@@ -293,6 +344,7 @@ export async function getAgenda(
       date: dateKey,
       label: localDayLabel(dateKey),
       tasks: [],
+      appointments: [],
     };
 
     day.tasks.push({
@@ -302,12 +354,26 @@ export async function getAgenda(
     days.set(dateKey, day);
   }
 
+  for (const appointment of appointments) {
+    const dateKey = localDateKey(appointment.start);
+    const day = days.get(dateKey) ?? {
+      date: dateKey,
+      label: localDayLabel(dateKey),
+      tasks: [],
+      appointments: [],
+    };
+
+    day.appointments.push(appointment);
+    days.set(dateKey, day);
+  }
+
   return {
     from: fromDateKey,
     to: toDateKey,
     start_utc: start,
     end_utc: endExclusive,
     days: [...days.values()],
-    count: tasks.length,
+    appointments,
+    count: tasks.length + appointments.length,
   };
 }

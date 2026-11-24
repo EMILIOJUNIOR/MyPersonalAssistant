@@ -10,7 +10,7 @@ status: deprecated
 
 > **Documento histórico.** A fonte de verdade atual é [`../index.md`](../index.md). Este plano pode conter itens ainda não implementados; consulte o `status` dos conceitos de domínio.
 
-**Stack:** eve (Vercel) · Telegram · Turso (libSQL) · Vercel Blob
+**Stack:** eve (Vercel) · Telegram · Turso (libSQL)
 **Status:** v1 em construção
 **Última atualização:** 2026-11-17
 
@@ -41,7 +41,7 @@ ferramenta que você usa todos os dias.
 | Banco | Turso (libSQL) | SQLite gerenciado, free tier, mesmo SQL do dev. |
 | Ambiente | Turso Cloud desde o início | Banco já criado em `aws-sa-east-1`; um só banco no v1. |
 | Acesso ao banco | `@libsql/client` | Cliente maduro para libSQL, com suporte a arquivo local e remoto. |
-| Memória | `fileMemory()` + Vercel Blob | Preferências entre sessões sem construir um provider. |
+| Memória | Tabela `entries` do Turso | Mantém preferências no mesmo banco da LumIA. |
 | Interface | Sem frontend no v1 | O Telegram é a interface. |
 | Modelo | `opencode-go` / `gpt-6-luna` | Já configurado; validar em produção na etapa 0. |
 | Usuários | Um (você) | Sem multiusuário, mas com escopo por principal desde o início. |

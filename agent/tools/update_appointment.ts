@@ -2,7 +2,8 @@ import { defineTool } from "eve/tools";
 import { always } from "eve/tools/approval";
 import { z } from "zod";
 
-import { agenda, appointmentSchema, isoDateTime } from "../lib/agenda";
+import { appointmentSchema, isoDateTime } from "../lib/agenda";
+import { updateAppointment as updateTursoAppointment } from "../../lib/appointments";
 
 export default defineTool({
   description:
@@ -25,7 +26,7 @@ export default defineTool({
   },
   async execute({ id, allowOverlap, ...changes }) {
     return {
-      appointment: await agenda().update({ id, ...changes }, { allowOverlap }),
+      appointment: await updateTursoAppointment({ id, ...changes }, allowOverlap),
     };
   },
 });

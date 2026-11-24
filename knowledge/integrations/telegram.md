@@ -42,6 +42,39 @@ generated: { by: opencode/gpt-6-luna, at: 2026-11-19T12:19:15Z }
 - Conferir com `getWebhookInfo`; `last_error_message` deve ser `null`.
 - Se o projeto for renomeado na Vercel, o domínio muda e o webhook quebra.
 
+# Descobrir `TELEGRAM_ALLOWED_USER_ID`
+
+O ID da allowlist é o `message.from.id` enviado pelo Telegram. Ele não é o username.
+
+Se o bot já estiver com webhook ativo, capture o ID temporariamente:
+
+1. Remova o webhook:
+
+   ```powershell
+   node --env-file=.env.local --input-type=module -e "const r=await fetch('https://api.telegram.org/bot'+process.env.TELEGRAM_BOT_TOKEN+'/deleteWebhook',{method:'POST'}); console.log(await r.json())"
+   ```
+
+2. Envie `/start` para o bot correto.
+3. Consulte o ID:
+
+   ```powershell
+   node --env-file=.env.local --input-type=module -e "const r=await fetch('https://api.telegram.org/bot'+process.env.TELEGRAM_BOT_TOKEN+'/getUpdates'); const b=await r.json(); console.log(JSON.stringify(b.result?.map(x=>({update_id:x.update_id,user_id:x.message?.from?.id,username:x.message?.from?.username,chat_id:x.message?.chat?.id})),null,2))"
+   ```
+
+4. Grave o `user_id` no `.env.local` e na Vercel:
+
+   ```env
+   TELEGRAM_ALLOWED_USER_ID=123456789
+   ```
+
+5. Restaure o webhook:
+
+   ```powershell
+   node --env-file=.env.local --input-type=module -e "const r=await fetch('https://api.telegram.org/bot'+process.env.TELEGRAM_BOT_TOKEN+'/setWebhook',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({url:'https://<projeto>.vercel.app/telegram/inbound',secret_token:process.env.TELEGRAM_WEBHOOK_SECRET_TOKEN,allowed_updates:['message']})}); console.log(await r.json())"
+   ```
+
+Confira `getWebhookInfo` depois. Não cole tokens no chat ou no repositório. Depois de alterar variáveis de produção, execute `npx eve deploy --non-interactive --yes`.
+
 # Variáveis de ambiente
 
 | Variável | Uso |

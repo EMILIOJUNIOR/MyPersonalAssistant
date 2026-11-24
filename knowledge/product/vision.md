@@ -45,7 +45,7 @@ Uma única pessoa, em português, usando o Telegram no celular. O escopo é pess
 | Projetos, entradas e vínculos | Implementado |
 | Áudio transcrito via Groq | Implementado |
 | Deploy na Vercel e banco Turso | Implementado |
-| Preferências duráveis entre conversas | **Não implementado** |
+| Preferências duráveis entre conversas | Implementado |
 | Resumo matinal e revisão noturna | **Não implementado** |
 | Google Calendar / Gmail | Fora do v1 |
 | Frontend web | Fora do v1 |

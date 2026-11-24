@@ -1,7 +1,8 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
-import { agenda, appointmentSchema } from "../lib/agenda";
+import { appointmentSchema } from "../lib/agenda";
+import { listAppointments as listTursoAppointments } from "../../lib/appointments";
 
 export default defineTool({
   description:
@@ -23,8 +24,7 @@ export default defineTool({
     complete: (_input, output) => `${output.count} compromisso(s) encontrado(s)`,
   },
   async execute({ from, to, query, includeCancelled, limit }) {
-    const repository = agenda();
-    const appointments = await repository.list({
+    const appointments = await listTursoAppointments({
       from,
       to,
       search: query,
@@ -32,6 +32,6 @@ export default defineTool({
       limit,
     });
 
-    return { count: appointments.length, storage: repository.location, appointments };
+    return { count: appointments.length, storage: "turso", appointments };
   },
 });

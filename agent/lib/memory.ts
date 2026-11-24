@@ -1,38 +1,25 @@
-import path from "node:path";
+import { randomUUID } from "node:crypto";
 
-import { createMutex, readTextIfExists, writeTextAtomic } from "./fs-utils";
+import { getDb } from "../../lib/db";
+import { nowIso } from "../../lib/time";
 
 const MAX_ENTRY_CHARS = 2_000;
-const MAX_ENTRIES = 200;
-
-/** Local notes file. Override with LUMIA_MEMORY_FILE; it will move into the database later. */
-export function memoryFile(): string {
-  return (
-    process.env.LUMIA_MEMORY_FILE ??
-    path.resolve(process.cwd(), "data", "memoria.md")
-  );
-}
-
-const enqueue = createMutex();
+const MEMORY_TAG = '"preference"';
 
 function normalize(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
 
-function entryOf(line: string): string {
-  return normalize(line.replace(/^\s*[-*]\s*/, ""));
-}
-
-function linesOf(raw: string): string[] {
-  return raw.split(/\r?\n/).filter((line) => line.trim().length > 0);
-}
-
-/** Whole document, or null when there is nothing to remember yet. */
 export async function readMemory(): Promise<string | null> {
-  const raw = await readTextIfExists(memoryFile());
-  if (raw === null) return null;
-  const content = raw.trim();
-  return content.length > 0 ? content : null;
+  const result = await getDb().execute({
+    sql: `SELECT content FROM entries
+          WHERE kind = 'note' AND status = 'active' AND tags LIKE ?
+          ORDER BY created_at ASC`,
+    args: [`%${MEMORY_TAG}%`],
+  });
+
+  if (result.rows.length === 0) return null;
+  return result.rows.map((row) => `- ${String(row.content)}`).join("\n");
 }
 
 export interface RememberResult {
@@ -40,7 +27,6 @@ export interface RememberResult {
   total: number;
 }
 
-/** Appends one bullet. Identical entries are ignored, so repeats don't pile up. */
 export async function remember(text: string): Promise<RememberResult> {
   const entry = normalize(text);
   if (entry.length < 3) {
@@ -52,23 +38,26 @@ export async function remember(text: string): Promise<RememberResult> {
     );
   }
 
-  return enqueue(async () => {
-    const raw = (await readTextIfExists(memoryFile())) ?? "";
-    const lines = linesOf(raw);
-
-    if (lines.some((line) => entryOf(line).toLowerCase() === entry.toLowerCase())) {
-      return { added: false, total: lines.length };
-    }
-    if (lines.length >= MAX_ENTRIES) {
-      throw new Error(
-        `A memória já tem ${lines.length} notas. Use forget para remover o que não vale mais antes de lembrar de algo novo.`,
-      );
-    }
-
-    lines.push(`- ${entry}`);
-    await writeTextAtomic(memoryFile(), `${lines.join("\n")}\n`);
-    return { added: true, total: lines.length };
+  const existing = await getDb().execute({
+    sql: `SELECT id FROM entries
+          WHERE kind = 'note' AND status = 'active' AND tags LIKE ? AND lower(content) = lower(?)`,
+    args: [`%${MEMORY_TAG}%`, entry],
   });
+
+  if (existing.rows.length > 0) {
+    const count = await countMemory();
+    return { added: false, total: count };
+  }
+
+  const at = nowIso();
+  await getDb().execute({
+    sql: `INSERT INTO entries
+          (id, kind, title, content, tags, status, metadata, created_at, updated_at)
+          VALUES (?, 'note', 'Preferência', ?, ?, 'active', NULL, ?, ?)`,
+    args: [randomUUID(), entry, `["preference"]`, at, at],
+  });
+
+  return { added: true, total: await countMemory() };
 }
 
 export interface ForgetResult {
@@ -76,28 +65,31 @@ export interface ForgetResult {
   total: number;
 }
 
-/** Removes every entry containing the text (case-insensitive). */
 export async function forget(text: string): Promise<ForgetResult> {
-  const needle = normalize(text).toLowerCase();
+  const needle = normalize(text);
   if (needle.length < 3) {
     throw new Error("Diga um trecho da nota que devo esquecer.");
   }
 
-  return enqueue(async () => {
-    const raw = await readTextIfExists(memoryFile());
-    if (raw === null) {
-      throw new Error("A memória está vazia; não há nada para esquecer.");
-    }
-
-    const lines = linesOf(raw);
-    const kept = lines.filter((line) => !entryOf(line).toLowerCase().includes(needle));
-    const removed = lines.length - kept.length;
-
-    if (removed === 0) {
-      throw new Error(`Não encontrei nenhuma nota com "${text}".`);
-    }
-
-    await writeTextAtomic(memoryFile(), kept.length > 0 ? `${kept.join("\n")}\n` : "");
-    return { removed, total: kept.length };
+  const result = await getDb().execute({
+    sql: `UPDATE entries
+          SET status = 'archived', updated_at = ?
+          WHERE kind = 'note' AND status = 'active' AND tags LIKE ? AND lower(content) LIKE lower(?)`,
+    args: [nowIso(), `%${MEMORY_TAG}%`, `%${needle}%`],
   });
+
+  if (result.rowsAffected === 0) {
+    throw new Error(`Não encontrei nenhuma nota com "${text}".`);
+  }
+
+  return { removed: result.rowsAffected, total: await countMemory() };
+}
+
+async function countMemory(): Promise<number> {
+  const result = await getDb().execute({
+    sql: `SELECT COUNT(*) AS count FROM entries
+          WHERE kind = 'note' AND status = 'active' AND tags LIKE ?`,
+    args: [`%${MEMORY_TAG}%`],
+  });
+  return Number(result.rows[0]?.count ?? 0);
 }

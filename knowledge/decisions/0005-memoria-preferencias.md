@@ -1,9 +1,9 @@
 ---
 type: Decision
 title: "Memória: preferências duráveis"
-description: Decisão registrada de usar fileMemory + Vercel Blob; ainda não implementada.
+description: Preferências duráveis são armazenadas como entradas no Turso.
 tags: [decisao, memoria, preferencias, pendente]
-status: draft
+status: stable
 generated: { by: opencode/gpt-6-luna, at: 2026-11-19T12:19:15Z }
 sources:
   - id: plan
@@ -13,34 +13,33 @@ sources:
 
 # Contexto
 
-Preferências como "prefiro reuniões de manhã" deveriam sobreviver a novas sessões e redeploys. O [Plano de Projeto](/references/plan.md) decidiu usar `fileMemory()` + Vercel Blob para não construir um provider próprio.
+Preferências como "prefiro reuniões de manhã" devem sobreviver a novas sessões e redeploys. A LumIA usa a tabela `entries` do Turso com a tag `preference`.
 
 # Estado atual
 
-**Não implementado.** Não existe `agent/memory/`; as instructions atuais avisam que preferências duráveis ainda não têm tool e que o assistente não deve prometer lembrar entre conversas.
+**Implementado.** `remember` cria uma entrada `note` marcada como `preference`; `forget` arquiva as entradas correspondentes. `agent/instructions/memoria.ts` injeta as preferências ativas antes das chamadas do modelo.
 
 # Decisão registrada
 
-Quando for implementado:
+Regras:
 
-- Usar `fileMemory()` com Vercel Blob.
 - Guardar apenas preferências e fatos duráveis, nunca segredos.
-- Escopo por principal.
-- Evitar duplicatas a cada conversa.
+- Evitar duplicatas por comparação case-insensitive.
+- Arquivar ao esquecer, preservando histórico no banco.
 
 # Alternativas
 
 | Alternativa | Por que não agora |
 | --- | --- |
 | Provider próprio | Complexidade desnecessária para um usuário. |
-| Tabela `entries` como memória | Mistura conhecimento curado com preferências operacionais. |
-| Não ter memória | Limita a experiência, mas é o estado atual. |
+| Vercel Blob | Adiciona outro armazenamento e não participa da transação do Turso. |
+| Não ter memória | Limita a experiência. |
 
 # Consequências
 
-- Hoje, o assistente não lembra preferências entre conversas.
-- A decisão precisa ser implementada ou revista; enquanto isso, `status: draft`.
-- Ao implementar, atualizar este conceito, as instructions e o `log.md`.
+- Preferências ficam no mesmo banco que tarefas e conhecimento.
+- O filtro por tag separa preferências de entradas comuns.
+- Segredos continuam proibidos.
 
 # Relações
 

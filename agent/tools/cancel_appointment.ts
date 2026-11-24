@@ -2,7 +2,8 @@ import { defineTool } from "eve/tools";
 import { always } from "eve/tools/approval";
 import { z } from "zod";
 
-import { agenda, appointmentSchema } from "../lib/agenda";
+import { appointmentSchema } from "../lib/agenda";
+import { cancelAppointment as cancelTursoAppointment } from "../../lib/appointments";
 
 export default defineTool({
   description:
@@ -18,6 +19,6 @@ export default defineTool({
     complete: (_input, output) => `Cancelado: ${output.appointment.title}`,
   },
   async execute({ id, reason }) {
-    return { appointment: await agenda().cancel(id, reason) };
+    return { appointment: await cancelTursoAppointment(id, reason) };
   },
 });

@@ -2,7 +2,8 @@ import { defineTool } from "eve/tools";
 import { always } from "eve/tools/approval";
 import { z } from "zod";
 
-import { agenda, appointmentSchema, isoDateTime } from "../lib/agenda";
+import { appointmentSchema, isoDateTime } from "../lib/agenda";
+import { createAppointment } from "../../lib/appointments";
 
 export default defineTool({
   description:
@@ -25,10 +26,7 @@ export default defineTool({
     complete: (_input, output) => `Agendado: ${output.appointment.title} (${output.appointment.id})`,
   },
   async execute({ title, start, end, location, notes, allowOverlap }) {
-    const appointment = await agenda().create(
-      { title, start, end, location, notes },
-      { allowOverlap },
-    );
+    const appointment = await createAppointment({ title, start, end, location, notes }, allowOverlap);
 
     return { appointment };
   },

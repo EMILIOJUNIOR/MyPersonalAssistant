@@ -14,6 +14,22 @@ generated: { by: opencode/gpt-6-luna, at: 2026-11-19T12:19:15Z }
 - `scripts/migrate.ts` cria `_migrations`, roda cada arquivo uma vez em transação e registra o nome.
 - Se uma migração falhar, a transação sofre rollback e o runner para.
 
+# Schema completo para Turso
+
+Para criar diretamente um banco Turso vazio:
+
+```sh
+turso db shell <nome-do-banco> < db/turso-schema.sql
+```
+
+O arquivo `db/turso-schema.sql` é idempotente, cria o schema final e registra `0001_init.sql`, `0002_knowledge.sql` e `0003_appointments.sql` em `_migrations`. Depois disso, `npm run db:migrate` reconhece essas migrações como aplicadas.
+
+Para importar a agenda JSON legada sem duplicar registros:
+
+```sh
+npm run agenda:import
+```
+
 # Comando
 
 ```sh

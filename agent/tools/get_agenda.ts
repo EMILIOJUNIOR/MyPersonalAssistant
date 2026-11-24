@@ -4,7 +4,7 @@ import { getAgenda } from "../../lib/reminders";
 
 export default defineTool({
   description:
-    "Mostra a agenda de compromissos com prazo entre duas datas locais, agrupada por dia, com lembretes pendentes. Use para 'o que tenho amanhã', 'minha semana' ou revisão do dia.",
+    "Mostra a agenda com tarefas, compromissos e lembretes entre duas datas locais, agrupada por dia. Por padrão, oculta itens já encerrados; use include_past=true somente quando o usuário pedir histórico ou todos os itens.",
   inputSchema: z.object({
     from: z
       .string()
@@ -18,8 +18,12 @@ export default defineTool({
       .boolean()
       .optional()
       .describe("Inclui tarefas concluídas (padrão: false)."),
+    include_past: z
+      .boolean()
+      .optional()
+      .describe("Inclui compromissos e tarefas já passados; só use quando o usuário pedir explicitamente."),
   }),
   async execute(input) {
-    return getAgenda(input.from, input.to, input.include_done);
+    return getAgenda(input.from, input.to, input.include_done, input.include_past);
   },
 });

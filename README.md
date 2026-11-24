@@ -64,9 +64,9 @@ Schedule */15 * * * * → busca lembretes vencidos → Telegram
 
 `list_workspace_projects` e `read_project_file` trabalham com projetos de código reais no filesystem.
 
-### Compatibilidade local
+### Persistência
 
-As ferramentas `add_appointment`, `list_appointments`, `update_appointment`, `cancel_appointment`, `remember` e `forget` foram mantidas temporariamente para compatibilidade com dados e conversas antigas. Novas ações devem usar o banco Turso.
+As ferramentas de agenda gravam exclusivamente no Turso. O arquivo `data/compromissos.json` não é usado em runtime.
 
 ## Configuração
 
@@ -119,6 +119,20 @@ As migrações são aplicadas em ordem e registradas na tabela `_migrations`:
 npm run db:migrate
 ```
 
+Para criar o schema diretamente em um banco Turso vazio:
+
+```bash
+turso db shell <nome-do-banco> < db/turso-schema.sql
+```
+
+O arquivo `db/turso-schema.sql` é idempotente, contém o schema final completo e registra as migrações em `_migrations`.
+
+Para importar compromissos existentes do arquivo legado `data/compromissos.json`:
+
+```bash
+npm run agenda:import
+```
+
 O banco contém:
 
 - `tasks`: tarefas, prazos, prioridade e status.
@@ -126,8 +140,11 @@ O banco contém:
 - `projects`: projetos pessoais.
 - `entries`: conhecimento, ideias e decisões.
 - `entry_links`: relações entre entradas.
+- `appointments`: compromissos com início, fim e status.
 
 Instantes são armazenados em UTC. A conversão para `America/Sao_Paulo` ocorre apenas na borda da aplicação.
+
+Nas consultas de agenda por semana ou mês, a LumIA oculta compromissos e tarefas já encerrados por padrão. Para consultar o histórico, peça explicitamente todos os itens ou os eventos passados.
 
 ## Telegram
 
@@ -153,6 +170,22 @@ https://<projeto>.vercel.app/telegram/inbound
 ```
 
 enviando o mesmo `secret_token` configurado no ambiente.
+
+### Descobrir o ID autorizado
+
+O `TELEGRAM_ALLOWED_USER_ID` é o número `message.from.id` do usuário. Se os bots auxiliares não responderem, capture-o temporariamente pelo Bot API:
+
+```powershell
+node --env-file=.env.local --input-type=module -e "const r=await fetch('https://api.telegram.org/bot'+process.env.TELEGRAM_BOT_TOKEN+'/deleteWebhook',{method:'POST'}); console.log(await r.json())"
+```
+
+Envie `/start` ao bot e consulte:
+
+```powershell
+node --env-file=.env.local --input-type=module -e "const r=await fetch('https://api.telegram.org/bot'+process.env.TELEGRAM_BOT_TOKEN+'/getUpdates'); const b=await r.json(); console.log(JSON.stringify(b.result?.map(x=>({user_id:x.message?.from?.id,username:x.message?.from?.username})),null,2))"
+```
+
+Depois coloque o `user_id` em `TELEGRAM_ALLOWED_USER_ID`, atualize a variável Production da Vercel, rode `npx eve deploy --non-interactive --yes` e restaure o webhook. O passo completo está em `knowledge/integrations/telegram.md`.
 
 ## Lembretes automáticos
 
@@ -194,6 +227,6 @@ O projeto local foi adequado à arquitetura do repositório `Concyline/PersonalA
 - O nome e a persona **LumIA**.
 - Os evals locais.
 - A leitura de projetos reais no workspace.
-- A compatibilidade temporária com agenda JSON e memória Markdown.
+- O script de importação inicial da agenda JSON, sem usar JSON em runtime.
 
-Para uma migração definitiva, os dados existentes em `data/compromissos.json` devem ser convertidos manualmente em tarefas e lembretes no Turso antes de remover as ferramentas legadas.
+Os compromissos existentes foram importados para a tabela `appointments`; o JSON permanece apenas como backup local.
