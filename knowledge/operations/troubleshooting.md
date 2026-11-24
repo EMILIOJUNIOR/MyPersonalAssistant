@@ -15,7 +15,7 @@ generated: { by: opencode/gpt-6-luna, at: 2026-11-19T12:19:15Z }
 | Bot não responde | Webhook em URL errada | Revisar `getWebhookInfo.url`; apontar para `/telegram/inbound`. |
 | `401` no webhook | Secret diferente entre Telegram e deploy | Regravar o webhook com o secret do deploy. |
 | `401` no self-fetch | Deployment Protection na Vercel | Desativar para produção ou usar bypass. |
-| Bot recebe update, mas não responde | `TELEGRAM_ALLOWED_USER_ID` ausente, inválido ou diferente de `message.from.id` | Capturar o ID pelo procedimento em `knowledge/integrations/telegram.md`, atualizar a Vercel e refazer o deploy. |
+| Bot recebe update, mas não responde | Chat não é privado, secret inválido ou webhook incorreto | Conferir `chat.type`, `TELEGRAM_WEBHOOK_SECRET_TOKEN` e `getWebhookInfo`. |
 | `getMe` retorna `401 Unauthorized` | Token revogado ou pertencente a outro bot | Gerar novo token no BotFather, atualizar local/Vercel, refazer deploy e registrar o webhook. |
 | `404` em `/telegram/inbound` | Deploy antigo ou rota não compilada | Conferir manifest e refazer deploy. |
 | Bot para após renomear projeto | Domínio `*.vercel.app` mudou | Regravar webhook; evitar renomear. |

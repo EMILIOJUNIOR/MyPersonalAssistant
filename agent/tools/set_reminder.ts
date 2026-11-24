@@ -1,6 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 import { setReminder } from "../../lib/reminders";
+import { tenantId } from "../lib/tenant";
 
 export default defineTool({
   description:
@@ -13,7 +14,7 @@ export default defineTool({
         "Quando avisar, em ISO 8601 UTC, ex.: 2026-11-20T13:00:00.000Z.",
       ),
   }),
-  async execute(input) {
-    return setReminder(input.task_id, input.remind_at);
+  async execute(input, ctx) {
+    return setReminder(tenantId(ctx), input.task_id, input.remind_at);
   },
 });

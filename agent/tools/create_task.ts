@@ -1,6 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 import { createTask, type TaskPriority } from "../../lib/tasks";
+import { tenantId } from "../lib/tenant";
 
 const PRIORITIES = ["low", "normal", "high"] as const satisfies readonly TaskPriority[];
 
@@ -23,8 +24,8 @@ export default defineTool({
       .optional()
       .describe("Projeto ao qual a tarefa pertence."),
   }),
-  async execute(input) {
-    const task = await createTask(input);
+  async execute(input, ctx) {
+    const task = await createTask(tenantId(ctx), input);
 
     return {
       id: task.id,

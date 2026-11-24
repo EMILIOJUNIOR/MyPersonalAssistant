@@ -56,13 +56,6 @@ interface TelegramUpdate {
   [key: string]: unknown;
 }
 
-const allowedUsers = new Set(
-  (process.env.TELEGRAM_ALLOWED_USER_ID ?? "")
-    .split(",")
-    .map((id) => id.trim())
-    .filter(Boolean),
-);
-
 function secretMatches(received: string | null): boolean {
   const expected = process.env.TELEGRAM_WEBHOOK_SECRET_TOKEN ?? "";
   if (!expected || !received || received.length !== expected.length) return false;
@@ -73,7 +66,7 @@ function isAllowedPrivateChat(message: TelegramMessage): boolean {
   if (message.chat?.type !== "private") return false;
   const senderId = message.from?.id;
   if (senderId === undefined) return false;
-  return allowedUsers.has(String(senderId));
+  return senderId !== undefined;
 }
 
 function botToken(): string {

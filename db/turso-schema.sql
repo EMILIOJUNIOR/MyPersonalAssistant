@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS _migrations (
 
 CREATE TABLE IF NOT EXISTS projects (
   id          TEXT PRIMARY KEY,
+  tenant_id   TEXT NOT NULL,
   name        TEXT NOT NULL,
   description TEXT,
   status      TEXT NOT NULL DEFAULT 'active'
@@ -28,6 +29,7 @@ CREATE INDEX IF NOT EXISTS idx_projects_status
 
 CREATE TABLE IF NOT EXISTS entries (
   id         TEXT PRIMARY KEY,
+  tenant_id  TEXT NOT NULL,
   kind       TEXT NOT NULL
              CHECK (kind IN ('idea', 'note', 'decision', 'summary', 'reference')),
   title      TEXT NOT NULL,
@@ -52,6 +54,7 @@ CREATE INDEX IF NOT EXISTS idx_entries_status
 
 CREATE TABLE IF NOT EXISTS tasks (
   id           TEXT PRIMARY KEY,
+  tenant_id    TEXT NOT NULL,
   title        TEXT NOT NULL,
   notes        TEXT,
   status       TEXT NOT NULL DEFAULT 'open'
@@ -74,6 +77,7 @@ CREATE INDEX IF NOT EXISTS idx_tasks_project
 
 CREATE TABLE IF NOT EXISTS reminders (
   id         TEXT PRIMARY KEY,
+  tenant_id  TEXT NOT NULL,
   task_id    TEXT NOT NULL
              REFERENCES tasks(id) ON DELETE CASCADE,
   remind_at  TEXT NOT NULL,
@@ -107,6 +111,7 @@ CREATE INDEX IF NOT EXISTS idx_entry_links_to
 
 CREATE TABLE IF NOT EXISTS appointments (
   id         TEXT PRIMARY KEY,
+  tenant_id  TEXT NOT NULL,
   title      TEXT NOT NULL,
   start_at   TEXT NOT NULL,
   end_at     TEXT NOT NULL,
@@ -123,6 +128,7 @@ CREATE INDEX IF NOT EXISTS idx_appointments_start
 
 CREATE TABLE IF NOT EXISTS appointment_reminders (
   id             TEXT PRIMARY KEY,
+  tenant_id      TEXT NOT NULL,
   appointment_id TEXT NOT NULL
                  REFERENCES appointments(id) ON DELETE CASCADE,
   kind           TEXT NOT NULL
@@ -148,3 +154,6 @@ VALUES ('0003_appointments.sql', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
 
 INSERT OR IGNORE INTO _migrations (id, applied_at)
 VALUES ('0004_appointment_reminders.sql', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+
+INSERT OR IGNORE INTO _migrations (id, applied_at)
+VALUES ('0005_multitenancy.sql', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));

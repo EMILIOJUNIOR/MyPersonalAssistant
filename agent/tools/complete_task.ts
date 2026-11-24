@@ -1,6 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 import { completeTask } from "../../lib/tasks";
+import { tenantId } from "../lib/tenant";
 
 export default defineTool({
   description:
@@ -8,8 +9,8 @@ export default defineTool({
   inputSchema: z.object({
     task_id: z.string().uuid().describe("ID da tarefa concluída."),
   }),
-  async execute({ task_id }) {
-    const task = await completeTask(task_id);
+  async execute({ task_id }, ctx) {
+    const task = await completeTask(tenantId(ctx), task_id);
 
     return {
       id: task.id,

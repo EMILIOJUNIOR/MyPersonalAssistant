@@ -1,6 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 import { recordDecision } from "../../lib/entries";
+import { tenantId } from "../lib/tenant";
 
 export default defineTool({
   description:
@@ -28,8 +29,8 @@ export default defineTool({
       .describe("Projeto relacionado, se houver."),
     tags: z.array(z.string().min(1).max(40)).max(10).optional(),
   }),
-  async execute(input) {
-    const { entry } = await recordDecision({
+  async execute(input, ctx) {
+    const { entry } = await recordDecision(tenantId(ctx), {
       title: input.title,
       context: input.context,
       options: input.options,

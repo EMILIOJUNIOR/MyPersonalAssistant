@@ -1,6 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 import { createEntry, type EntryKind } from "../../lib/entries";
+import { tenantId } from "../lib/tenant";
 
 const KINDS = [
   "idea",
@@ -35,8 +36,8 @@ export default defineTool({
       .optional()
       .describe("ID do projeto ao qual a entrada pertence, se houver."),
   }),
-  async execute(input) {
-    const entry = await createEntry({
+  async execute(input, ctx) {
+    const entry = await createEntry(tenantId(ctx), {
       kind: input.kind,
       title: input.title,
       content: input.content,

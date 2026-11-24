@@ -23,7 +23,6 @@ generated: { by: opencode/gpt-6-luna, at: 2026-11-19T12:19:15Z }
 | `TURSO_AUTH_TOKEN` | Sim | `lib/db.ts`, `scripts/migrate.ts` |
 | `TELEGRAM_BOT_TOKEN` | Sim | Canal, lembretes e áudio. |
 | `TELEGRAM_BOT_USERNAME` | Sim | Canal nativo. |
-| `TELEGRAM_ALLOWED_USER_ID` | Sim | Allowlist e lembretes. |
 | `TELEGRAM_WEBHOOK_SECRET_TOKEN` | Sim | Webhook. |
 | `GROQ_API_KEY` | Só para áudio | Transcrição. |
 

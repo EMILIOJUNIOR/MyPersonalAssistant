@@ -2,6 +2,7 @@ import { defineTool } from "eve/tools";
 import { always } from "eve/tools/approval";
 import { z } from "zod";
 import { deleteTask } from "../../lib/tasks";
+import { tenantId } from "../lib/tenant";
 
 export default defineTool({
   description:
@@ -20,7 +21,7 @@ export default defineTool({
         ? `Apagar definitivamente a tarefa ${input.task_id}?`
         : `Cancelar a tarefa ${input.task_id}?`,
   },
-  async execute(input) {
-    return deleteTask(input.task_id, input.mode ?? "cancel");
+  async execute(input, ctx) {
+    return deleteTask(tenantId(ctx), input.task_id, input.mode ?? "cancel");
   },
 });

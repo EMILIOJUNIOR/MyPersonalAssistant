@@ -1,6 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 import { createProject, type ProjectStatus } from "../../lib/projects";
+import { tenantId } from "../lib/tenant";
 
 const STATUSES = [
   "active",
@@ -20,7 +21,7 @@ export default defineTool({
       .describe("Objetivo ou descrição curta do projeto."),
     status: z.enum(STATUSES).optional().describe("Padrão: active."),
   }),
-  async execute(input) {
-    return createProject(input);
+  async execute(input, ctx) {
+    return createProject(tenantId(ctx), input);
   },
 });

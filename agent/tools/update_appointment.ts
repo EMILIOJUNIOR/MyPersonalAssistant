@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { appointmentSchema, isoDateTime } from "../lib/appointment-schema";
 import { updateAppointment as updateTursoAppointment } from "../../lib/appointments";
+import { tenantId } from "../lib/tenant";
 
 export default defineTool({
   description:
@@ -22,9 +23,9 @@ export default defineTool({
     start: () => "Solicitando atualização do compromisso",
     complete: (_input, output) => `Compromisso alterado: ${output.appointment.title}`,
   },
-  async execute({ id, allowOverlap, ...changes }) {
+  async execute({ id, allowOverlap, ...changes }, ctx) {
     return {
-      appointment: await updateTursoAppointment({ id, ...changes }, allowOverlap),
+      appointment: await updateTursoAppointment(tenantId(ctx), { id, ...changes }, allowOverlap),
     };
   },
 });

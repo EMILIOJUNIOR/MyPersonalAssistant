@@ -1,6 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 import { searchEntries, type EntryKind } from "../../lib/entries";
+import { tenantId } from "../lib/tenant";
 
 const KINDS = [
   "idea",
@@ -38,8 +39,8 @@ export default defineTool({
       .optional()
       .describe("Máximo de resultados (padrão: 10)."),
   }),
-  async execute(input) {
-    const entries = await searchEntries({
+  async execute(input, ctx) {
+    const entries = await searchEntries(tenantId(ctx), {
       query: input.query,
       kind: input.kind,
       project_id: input.project_id,

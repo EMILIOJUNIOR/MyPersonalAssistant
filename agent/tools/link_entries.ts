@@ -1,6 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 import { linkEntries } from "../../lib/entries";
+import { tenantId } from "../lib/tenant";
 
 export default defineTool({
   description:
@@ -15,8 +16,9 @@ export default defineTool({
       .optional()
       .describe("Rótulo do vínculo, como 'related', 'origem', 'substitui'."),
   }),
-  async execute(input) {
+  async execute(input, ctx) {
     return linkEntries(
+      tenantId(ctx),
       input.from_entry_id,
       input.to_entry_id,
       input.relation,

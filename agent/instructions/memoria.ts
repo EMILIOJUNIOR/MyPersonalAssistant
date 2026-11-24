@@ -10,7 +10,9 @@ import { readMemory } from "../lib/memory";
  * adds nothing, which keeps the prompt clean while the memory is still empty.
  */
 export default defineDynamic(async (ctx) => {
-  const memory = await ctx.memo(ctx.turn?.id ?? null, () => readMemory());
+  const tenantId = ctx.session.auth.current?.attributes.user_id;
+  if (typeof tenantId !== "string") return null;
+  const memory = await ctx.memo(ctx.turn?.id ?? null, () => readMemory(tenantId));
   if (!memory) return null;
 
   return defineInstructions({

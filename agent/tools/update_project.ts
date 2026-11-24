@@ -1,6 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 import { updateProject, type ProjectStatus } from "../../lib/projects";
+import { tenantId } from "../lib/tenant";
 
 const STATUSES = [
   "active",
@@ -22,8 +23,8 @@ export default defineTool({
       .describe("Use null para limpar a descrição."),
     status: z.enum(STATUSES).optional(),
   }),
-  async execute(input) {
-    return updateProject(input.project_id, {
+  async execute(input, ctx) {
+    return updateProject(tenantId(ctx), input.project_id, {
       name: input.name,
       description: input.description,
       status: input.status,

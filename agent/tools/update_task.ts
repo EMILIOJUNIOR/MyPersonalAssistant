@@ -1,6 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 import { updateTask, type TaskPriority } from "../../lib/tasks";
+import { tenantId } from "../lib/tenant";
 
 const PRIORITIES = ["low", "normal", "high"] as const satisfies readonly TaskPriority[];
 
@@ -28,8 +29,8 @@ export default defineTool({
       .optional()
       .describe("Novo projeto, ou null para desvincular."),
   }),
-  async execute(input) {
-    return updateTask(input.task_id, {
+  async execute(input, ctx) {
+    return updateTask(tenantId(ctx), input.task_id, {
       title: input.title,
       notes: input.notes,
       priority: input.priority,

@@ -10,6 +10,8 @@ generated: { by: opencode/gpt-6-luna, at: 2026-11-19T12:19:15Z }
 
 # Como funciona
 
+`0005_multitenancy.sql` adiciona `tenant_id` às tabelas de domínio e atribui os dados existentes ao tenant Telegram `1357657470`.
+
 - `db/migrations/*.sql` são aplicadas em ordem lexicográfica.
 - `scripts/migrate.ts` cria `_migrations`, roda cada arquivo uma vez em transação e registra o nome.
 - Se uma migração falhar, a transação sofre rollback e o runner para.

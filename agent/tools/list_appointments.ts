@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { appointmentSchema } from "../lib/appointment-schema";
 import { listAppointments as listTursoAppointments } from "../../lib/appointments";
+import { tenantId } from "../lib/tenant";
 
 export default defineTool({
   description:
@@ -23,8 +24,9 @@ export default defineTool({
     start: () => "Consultando a agenda",
     complete: (_input, output) => `${output.count} compromisso(s) encontrado(s)`,
   },
-  async execute({ from, to, query, includeCancelled, limit }) {
+  async execute({ from, to, query, includeCancelled, limit }, ctx) {
     const appointments = await listTursoAppointments({
+      tenantId: tenantId(ctx),
       from,
       to,
       search: query,

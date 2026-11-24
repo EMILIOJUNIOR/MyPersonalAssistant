@@ -91,13 +91,13 @@ function clampLimit(limit: number | undefined, fallback = 20): number {
   return Math.min(Math.max(Math.trunc(limit), 1), 50);
 }
 
-async function assertProject(projectId: string): Promise<void> {
-  if (!(await projectExists(projectId))) {
+async function assertProject(tenantId: string, projectId: string): Promise<void> {
+  if (!(await projectExists(tenantId, projectId))) {
     throw new Error("Projeto não encontrado.");
   }
 }
 
-export async function createTask(input: CreateTaskInput): Promise<Task> {
+export async function createTask(tenantId: string, input: CreateTaskInput): Promise<Task> {
   const title = input.title.trim();
 
   if (!title) {
@@ -105,7 +105,7 @@ export async function createTask(input: CreateTaskInput): Promise<Task> {
   }
 
   if (input.project_id) {
-    await assertProject(input.project_id);
+    await assertProject(tenantId, input.project_id);
   }
 
   const id = randomUUID();
@@ -116,10 +116,11 @@ export async function createTask(input: CreateTaskInput): Promise<Task> {
 
   await getDb().execute({
     sql: `INSERT INTO tasks
-            (id, title, notes, status, priority, due_at, created_at, updated_at, completed_at, project_id)
-          VALUES (?, ?, ?, 'open', ?, ?, ?, ?, NULL, ?)`,
+            (id, tenant_id, title, notes, status, priority, due_at, created_at, updated_at, completed_at, project_id)
+          VALUES (?, ?, ?, ?, 'open', ?, ?, ?, ?, NULL, ?)`,
     args: [
       id,
+      tenantId,
       title,
       input.notes?.trim() || null,
       input.priority ?? "normal",
@@ -130,7 +131,7 @@ export async function createTask(input: CreateTaskInput): Promise<Task> {
     ],
   });
 
-  const task = await getTask(id);
+  const task = await getTask(tenantId, id);
 
   if (!task) {
     throw new Error("Tarefa não encontrada após a criação.");
@@ -139,13 +140,13 @@ export async function createTask(input: CreateTaskInput): Promise<Task> {
   return task;
 }
 
-export async function getTask(id: string): Promise<TaskView | null> {
+export async function getTask(tenantId: string, id: string): Promise<TaskView | null> {
   const result = await getDb().execute({
     sql: `SELECT t.*, p.name AS project_name
           FROM tasks t
           LEFT JOIN projects p ON p.id = t.project_id
-          WHERE t.id = ?`,
-    args: [id],
+          WHERE t.tenant_id = ? AND t.id = ?`,
+    args: [tenantId, id],
   });
 
   const row = result.rows[0];
@@ -154,11 +155,14 @@ export async function getTask(id: string): Promise<TaskView | null> {
 }
 
 export async function listTasks(
+  tenantId: string,
   filters: ListTasksFilters = {},
 ): Promise<TaskView[]> {
   const conditions: string[] = [];
   const args: (string | number)[] = [];
   const status = filters.status ?? "open";
+  conditions.push("t.tenant_id = ?");
+  args.push(tenantId);
 
   if (status !== "all") {
     conditions.push("t.status = ?");
@@ -200,6 +204,7 @@ export async function listTasks(
 }
 
 export async function updateTask(
+  tenantId: string,
   id: string,
   patch: UpdateTaskInput,
 ): Promise<Task> {
@@ -236,7 +241,7 @@ export async function updateTask(
 
   if (patch.project_id !== undefined) {
     if (patch.project_id) {
-      await assertProject(patch.project_id);
+      await assertProject(tenantId, patch.project_id);
     }
 
     sets.push("project_id = ?");
@@ -244,7 +249,7 @@ export async function updateTask(
   }
 
   if (sets.length === 0) {
-    const current = await getTask(id);
+    const current = await getTask(tenantId, id);
 
     if (!current) {
       throw new Error("Tarefa não encontrada.");
@@ -258,15 +263,15 @@ export async function updateTask(
   args.push(id);
 
   const result = await getDb().execute({
-    sql: `UPDATE tasks SET ${sets.join(", ")} WHERE id = ?`,
-    args,
+    sql: `UPDATE tasks SET ${sets.join(", ")} WHERE tenant_id = ? AND id = ?`,
+    args: [...args.slice(0, -1), tenantId, id],
   });
 
   if (result.rowsAffected === 0) {
     throw new Error("Tarefa não encontrada.");
   }
 
-  const task = await getTask(id);
+  const task = await getTask(tenantId, id);
 
   if (!task) {
     throw new Error("Tarefa não encontrada.");
@@ -275,8 +280,8 @@ export async function updateTask(
   return task;
 }
 
-export async function completeTask(id: string): Promise<Task> {
-  const current = await getTask(id);
+export async function completeTask(tenantId: string, id: string): Promise<Task> {
+  const current = await getTask(tenantId, id);
 
   if (!current) {
     throw new Error("Tarefa não encontrada.");
@@ -295,11 +300,11 @@ export async function completeTask(id: string): Promise<Task> {
   await getDb().execute({
     sql: `UPDATE tasks
           SET status = 'done', completed_at = ?, updated_at = ?
-          WHERE id = ?`,
-    args: [at, at, id],
+          WHERE tenant_id = ? AND id = ?`,
+    args: [at, at, tenantId, id],
   });
 
-  const task = await getTask(id);
+  const task = await getTask(tenantId, id);
 
   if (!task) {
     throw new Error("Tarefa não encontrada.");
@@ -309,11 +314,12 @@ export async function completeTask(id: string): Promise<Task> {
 }
 
 export async function deleteTask(
+  tenantId: string,
   id: string,
   mode: "cancel" | "delete" = "cancel",
 ): Promise<{ id: string; mode: "cancel" | "delete"; status: TaskStatus }> {
   const db = getDb();
-  const current = await getTask(id);
+  const current = await getTask(tenantId, id);
 
   if (!current) {
     throw new Error("Tarefa não encontrada.");
@@ -321,13 +327,13 @@ export async function deleteTask(
 
   if (mode === "delete") {
     await db.execute({
-      sql: "DELETE FROM reminders WHERE task_id = ?",
-      args: [id],
+      sql: "DELETE FROM reminders WHERE tenant_id = ? AND task_id = ?",
+      args: [tenantId, id],
     });
 
     await db.execute({
-      sql: "DELETE FROM tasks WHERE id = ?",
-      args: [id],
+      sql: "DELETE FROM tasks WHERE tenant_id = ? AND id = ?",
+      args: [tenantId, id],
     });
 
     return { id, mode, status: current.status };
@@ -337,8 +343,8 @@ export async function deleteTask(
     await db.execute({
       sql: `UPDATE tasks
             SET status = 'cancelled', updated_at = ?
-            WHERE id = ?`,
-      args: [nowIso(), id],
+            WHERE tenant_id = ? AND id = ?`,
+      args: [nowIso(), tenantId, id],
     });
   }
 

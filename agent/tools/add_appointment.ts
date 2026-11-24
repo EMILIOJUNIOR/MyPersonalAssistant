@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { appointmentSchema, isoDateTime } from "../lib/appointment-schema";
 import { createAppointment } from "../../lib/appointments";
+import { tenantId } from "../lib/tenant";
 
 export default defineTool({
   description:
@@ -23,8 +24,8 @@ export default defineTool({
     start: ({ title }) => `Agendando ${title}`,
     complete: (_input, output) => `Agendado: ${output.appointment.title} (${output.appointment.id})`,
   },
-  async execute({ title, start, end, location, notes, allowOverlap }) {
-    const appointment = await createAppointment({ title, start, end, location, notes }, allowOverlap);
+  async execute({ title, start, end, location, notes, allowOverlap }, ctx) {
+    const appointment = await createAppointment(tenantId(ctx), { title, start, end, location, notes }, allowOverlap);
 
     return { appointment };
   },

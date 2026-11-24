@@ -32,7 +32,7 @@ Este bundle guarda o conhecimento durável da LumIA. Leia este índice primeiro 
 
 # Integrações
 
-* [Telegram](integrations/telegram.md) - canal, allowlist, webhook e áudio/Groq.
+* [Telegram](integrations/telegram.md) - canal multi-tenant, webhook e áudio/Groq.
 
 # Operações
 

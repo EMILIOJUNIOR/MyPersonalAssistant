@@ -75,18 +75,19 @@ function rowToAppointment(row: Record<string, unknown>): Appointment {
 }
 
 async function conflicts(
+  tenantId: string,
   start: string,
   end: string,
   ignoreId?: string,
 ): Promise<Appointment[]> {
   const result = await getDb().execute({
     sql: `SELECT * FROM appointments
-          WHERE status = 'confirmed'
+           WHERE tenant_id = ? AND status = 'confirmed'
             AND (? IS NULL OR id != ?)
             AND start_at < ?
             AND end_at > ?
           ORDER BY start_at ASC`,
-    args: [ignoreId ?? null, ignoreId ?? null, end, start],
+    args: [tenantId, ignoreId ?? null, ignoreId ?? null, end, start],
   });
 
   return result.rows.map((row) => {
@@ -97,14 +98,15 @@ async function conflicts(
 }
 
 export async function listAppointments(options: {
+  tenantId: string;
   from?: string;
   to?: string;
   search?: string;
   includeCancelled?: boolean;
   limit?: number;
-} = {}): Promise<Appointment[]> {
-  const conditions: string[] = [];
-  const args: (string | number)[] = [];
+}): Promise<Appointment[]> {
+  const conditions: string[] = ["tenant_id = ?"];
+  const args: (string | number)[] = [options.tenantId];
 
   if (!options.includeCancelled) conditions.push("status = 'confirmed'");
   if (options.from) {
@@ -132,10 +134,10 @@ export async function listAppointments(options: {
   return result.rows.map((row) => rowToAppointment(row as Record<string, unknown>));
 }
 
-export async function getAppointment(id: string): Promise<Appointment | null> {
+export async function getAppointment(tenantId: string, id: string): Promise<Appointment | null> {
   const result = await getDb().execute({
-    sql: "SELECT * FROM appointments WHERE id = ?",
-    args: [id],
+    sql: "SELECT * FROM appointments WHERE tenant_id = ? AND id = ?",
+    args: [tenantId, id],
   });
   const row = result.rows[0];
   if (!row) return null;
@@ -145,6 +147,7 @@ export async function getAppointment(id: string): Promise<Appointment | null> {
 }
 
 export async function createAppointment(
+  tenantId: string,
   input: AppointmentInput,
   allowOverlap = false,
 ): Promise<Appointment> {
@@ -153,7 +156,7 @@ export async function createAppointment(
   const range = validateRange(input.start, input.end);
 
   if (!allowOverlap) {
-    const existing = await conflicts(range.start, range.end);
+    const existing = await conflicts(tenantId, range.start, range.end);
     if (existing.length > 0) {
       throw new Error(
         `Conflito de horário com: ${existing.map((item) => `${item.title} (${item.start} → ${item.end})`).join("; ")}. Pergunte ao usuário se deseja manter assim.`,
@@ -165,10 +168,11 @@ export async function createAppointment(
   const at = nowIso();
   await getDb().execute({
     sql: `INSERT INTO appointments
-          (id, title, start_at, end_at, location, notes, status, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, 'confirmed', ?, ?)`,
+          (id, tenant_id, title, start_at, end_at, location, notes, status, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, 'confirmed', ?, ?)`,
     args: [
       id,
+      tenantId,
       title,
       range.start,
       range.end,
@@ -179,17 +183,18 @@ export async function createAppointment(
     ],
   });
 
-  const created = await getAppointment(id);
+  const created = await getAppointment(tenantId, id);
   if (!created) throw new Error("Compromisso não encontrado após a criação.");
-  await scheduleAppointmentReminders(created.id, created.start);
+  await scheduleAppointmentReminders(tenantId, created.id, created.start);
   return created;
 }
 
 export async function updateAppointment(
+  tenantId: string,
   input: AppointmentUpdate,
   allowOverlap = false,
 ): Promise<Appointment> {
-  const current = await getAppointment(input.id);
+  const current = await getAppointment(tenantId, input.id);
   if (!current) throw new Error(`Não encontrei o compromisso ${input.id}.`);
 
   const range = validateRange(input.start ?? current.start, input.end ?? current.end);
@@ -197,7 +202,7 @@ export async function updateAppointment(
   const timesChanged = input.start !== undefined || input.end !== undefined;
 
   if ((confirming || timesChanged) && !allowOverlap) {
-    const existing = await conflicts(range.start, range.end, input.id);
+    const existing = await conflicts(tenantId, range.start, range.end, input.id);
     if (existing.length > 0) {
       throw new Error(
         `Conflito de horário com: ${existing.map((item) => `${item.title} (${item.start} → ${item.end})`).join("; ")}. Pergunte ao usuário se deseja manter assim.`,
@@ -217,7 +222,7 @@ export async function updateAppointment(
     sql: `UPDATE appointments
           SET title = ?, start_at = ?, end_at = ?, location = ?, notes = ?,
               status = ?, updated_at = ?
-          WHERE id = ?`,
+          WHERE tenant_id = ? AND id = ?`,
     args: [
       next.title,
       range.start,
@@ -226,23 +231,24 @@ export async function updateAppointment(
       next.notes,
       next.status,
       nowIso(),
+      tenantId,
       input.id,
     ],
   });
 
   if (next.status === "confirmed") {
-    await scheduleAppointmentReminders(input.id, range.start);
+    await scheduleAppointmentReminders(tenantId, input.id, range.start);
   } else {
-    await clearAppointmentReminders(input.id);
+    await clearAppointmentReminders(tenantId, input.id);
   }
 
-  const updated = await getAppointment(input.id);
+  const updated = await getAppointment(tenantId, input.id);
   if (!updated) throw new Error("Compromisso não encontrado após a atualização.");
   return updated;
 }
 
-export async function cancelAppointment(id: string, reason?: string): Promise<Appointment> {
-  const current = await getAppointment(id);
+export async function cancelAppointment(tenantId: string, id: string, reason?: string): Promise<Appointment> {
+  const current = await getAppointment(tenantId, id);
   if (!current) throw new Error(`Não encontrei o compromisso ${id}.`);
   if (current.status === "cancelled") throw new Error(`O compromisso ${id} já está cancelado.`);
 
@@ -251,12 +257,12 @@ export async function cancelAppointment(id: string, reason?: string): Promise<Ap
     .join(" | ") || null;
 
   await getDb().execute({
-    sql: "UPDATE appointments SET status = 'cancelled', notes = ?, updated_at = ? WHERE id = ?",
-    args: [notes, nowIso(), id],
+    sql: "UPDATE appointments SET status = 'cancelled', notes = ?, updated_at = ? WHERE tenant_id = ? AND id = ?",
+    args: [notes, nowIso(), tenantId, id],
   });
-  await clearAppointmentReminders(id);
+  await clearAppointmentReminders(tenantId, id);
 
-  const cancelled = await getAppointment(id);
+  const cancelled = await getAppointment(tenantId, id);
   if (!cancelled) throw new Error("Compromisso não encontrado após o cancelamento.");
   return cancelled;
 }
@@ -272,10 +278,11 @@ export interface AppointmentReminder {
 }
 
 export async function scheduleAppointmentReminders(
+  tenantId: string,
   appointmentId: string,
   start: string,
 ): Promise<void> {
-  await clearAppointmentReminders(appointmentId);
+  await clearAppointmentReminders(tenantId, appointmentId);
 
   const startMs = Date.parse(start);
   if (startMs - Date.now() <= FIVE_DAYS_MS) return;
@@ -289,10 +296,11 @@ export async function scheduleAppointmentReminders(
   for (const reminder of reminders) {
     await getDb().execute({
       sql: `INSERT INTO appointment_reminders
-            (id, appointment_id, kind, remind_at, sent_at, created_at)
-            VALUES (?, ?, ?, ?, NULL, ?)`,
+            (id, tenant_id, appointment_id, kind, remind_at, sent_at, created_at)
+            VALUES (?, ?, ?, ?, ?, NULL, ?)`,
       args: [
         randomUUID(),
+        tenantId,
         appointmentId,
         reminder.kind,
         new Date(startMs - reminder.offset).toISOString(),
@@ -302,14 +310,15 @@ export async function scheduleAppointmentReminders(
   }
 }
 
-async function clearAppointmentReminders(appointmentId: string): Promise<void> {
+async function clearAppointmentReminders(tenantId: string, appointmentId: string): Promise<void> {
   await getDb().execute({
-    sql: "DELETE FROM appointment_reminders WHERE appointment_id = ?",
-    args: [appointmentId],
+    sql: "DELETE FROM appointment_reminders WHERE tenant_id = ? AND appointment_id = ?",
+    args: [tenantId, appointmentId],
   });
 }
 
 export async function claimDueAppointmentReminders(
+  tenantId: string,
   at = nowIso(),
   limit = 50,
 ): Promise<AppointmentReminder[]> {
@@ -318,12 +327,13 @@ export async function claimDueAppointmentReminders(
                  a.title, a.start_at
           FROM appointment_reminders r
           JOIN appointments a ON a.id = r.appointment_id
-          WHERE r.sent_at IS NULL
+           WHERE r.tenant_id = ?
+             AND r.sent_at IS NULL
             AND r.remind_at <= ?
             AND a.status = 'confirmed'
           ORDER BY r.remind_at ASC
           LIMIT ?`,
-    args: [at, limit],
+    args: [tenantId, at, limit],
   });
 
   return result.rows.map((row) => ({
@@ -338,11 +348,12 @@ export async function claimDueAppointmentReminders(
 }
 
 export async function markAppointmentReminderSent(
+  tenantId: string,
   id: string,
   at = nowIso(),
 ): Promise<void> {
   await getDb().execute({
-    sql: "UPDATE appointment_reminders SET sent_at = ? WHERE id = ? AND sent_at IS NULL",
-    args: [at, id],
+    sql: "UPDATE appointment_reminders SET sent_at = ? WHERE tenant_id = ? AND id = ? AND sent_at IS NULL",
+    args: [at, tenantId, id],
   });
 }

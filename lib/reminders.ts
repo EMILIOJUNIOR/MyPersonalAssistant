@@ -79,6 +79,7 @@ function rowToReminder(row: Record<string, unknown>): Reminder {
 }
 
 export async function setReminder(
+  tenantId: string,
   taskId: string,
   remindAt: string,
 ): Promise<Reminder> {
@@ -89,8 +90,8 @@ export async function setReminder(
   }
 
   const task = await getDb().execute({
-    sql: "SELECT id, status FROM tasks WHERE id = ?",
-    args: [taskId],
+    sql: "SELECT id, status FROM tasks WHERE tenant_id = ? AND id = ?",
+    args: [tenantId, taskId],
   });
 
   const row = task.rows[0];
@@ -107,17 +108,17 @@ export async function setReminder(
   const at = nowIso();
 
   await getDb().execute({
-    sql: `INSERT INTO reminders (id, task_id, remind_at, sent_at, created_at)
-          VALUES (?, ?, ?, NULL, ?)`,
-    args: [id, taskId, normalized, at],
+    sql: `INSERT INTO reminders (id, tenant_id, task_id, remind_at, sent_at, created_at)
+          VALUES (?, ?, ?, ?, NULL, ?)`,
+    args: [id, tenantId, taskId, normalized, at],
   });
 
   const result = await getDb().execute({
     sql: `SELECT r.*, t.title AS task_title, t.status AS task_status
           FROM reminders r
           JOIN tasks t ON t.id = r.task_id
-          WHERE r.id = ?`,
-    args: [id],
+           WHERE r.tenant_id = ? AND r.id = ?`,
+    args: [tenantId, id],
   });
 
   const created = result.rows[0];
@@ -130,10 +131,11 @@ export async function setReminder(
 }
 
 export async function listReminders(
+  tenantId: string,
   filters: ListRemindersFilters = {},
 ): Promise<Reminder[]> {
-  const conditions: string[] = ["1 = 1"];
-  const args: (string | number)[] = [];
+  const conditions: string[] = ["r.tenant_id = ?"];
+  const args: (string | number)[] = [tenantId];
 
   if (filters.task_id) {
     conditions.push("r.task_id = ?");
@@ -172,11 +174,11 @@ export async function listReminders(
   );
 }
 
-export async function cancelReminder(id: string): Promise<void> {
+export async function cancelReminder(tenantId: string, id: string): Promise<void> {
   const db = getDb();
   const result = await db.execute({
-    sql: "SELECT id, sent_at FROM reminders WHERE id = ?",
-    args: [id],
+    sql: "SELECT id, sent_at FROM reminders WHERE tenant_id = ? AND id = ?",
+    args: [tenantId, id],
   });
 
   const row = result.rows[0];
@@ -190,12 +192,13 @@ export async function cancelReminder(id: string): Promise<void> {
   }
 
   await db.execute({
-    sql: "DELETE FROM reminders WHERE id = ?",
-    args: [id],
+    sql: "DELETE FROM reminders WHERE tenant_id = ? AND id = ?",
+    args: [tenantId, id],
   });
 }
 
 export async function claimDueReminders(
+  tenantId: string,
   at = nowIso(),
   limit = 50,
 ): Promise<Reminder[]> {
@@ -203,12 +206,13 @@ export async function claimDueReminders(
     sql: `SELECT r.*, t.title AS task_title, t.status AS task_status
           FROM reminders r
           JOIN tasks t ON t.id = r.task_id
-          WHERE r.sent_at IS NULL
+           WHERE r.tenant_id = ?
+             AND r.sent_at IS NULL
             AND r.remind_at <= ?
             AND t.status = 'open'
           ORDER BY r.remind_at ASC
           LIMIT ?`,
-    args: [at, clampLimit(limit)],
+    args: [tenantId, at, clampLimit(limit)],
   });
 
   return result.rows.map((row) =>
@@ -217,12 +221,13 @@ export async function claimDueReminders(
 }
 
 export async function markReminderSent(
+  tenantId: string,
   id: string,
   at = nowIso(),
 ): Promise<void> {
   const result = await getDb().execute({
-    sql: "UPDATE reminders SET sent_at = ? WHERE id = ? AND sent_at IS NULL",
-    args: [at, id],
+    sql: "UPDATE reminders SET sent_at = ? WHERE tenant_id = ? AND id = ? AND sent_at IS NULL",
+    args: [at, tenantId, id],
   });
 
   if (result.rowsAffected === 0) {
@@ -231,6 +236,7 @@ export async function markReminderSent(
 }
 
 export async function getAgenda(
+  tenantId: string,
   fromDateKey: string,
   toDateKey: string,
   includeDone = false,
@@ -246,12 +252,13 @@ export async function getAgenda(
 }> {
   const { start, endExclusive } = localDayRangeUtc(fromDateKey, toDateKey);
   const conditions = [
+    "t.tenant_id = ?",
     "t.due_at IS NOT NULL",
     "t.due_at >= ?",
     "t.due_at < ?",
     "t.status != 'cancelled'",
   ];
-  const args: string[] = [start, endExclusive];
+  const args: string[] = [tenantId, start, endExclusive];
 
   if (!includePast) {
     conditions.push("t.due_at >= ?");
@@ -277,11 +284,12 @@ export async function getAgenda(
   );
 
   const appointmentConditions = [
+    "tenant_id = ?",
     "status = 'confirmed'",
     "start_at < ?",
     "end_at > ?",
   ];
-  const appointmentArgs: string[] = [endExclusive, start];
+  const appointmentArgs: string[] = [tenantId, endExclusive, start];
 
   if (!includePast) {
     appointmentConditions.push("end_at > ?");
@@ -315,9 +323,9 @@ export async function getAgenda(
     const remindersResult = await getDb().execute({
       sql: `SELECT id, task_id, remind_at, sent_at
             FROM reminders
-            WHERE task_id IN (${placeholders}) AND sent_at IS NULL
+             WHERE tenant_id = ? AND task_id IN (${placeholders}) AND sent_at IS NULL
             ORDER BY remind_at ASC`,
-      args: tasks.map((task) => task.id),
+        args: [tenantId, ...tasks.map((task) => task.id)],
     });
 
     for (const row of remindersResult.rows) {

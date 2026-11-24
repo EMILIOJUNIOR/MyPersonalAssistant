@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { appointmentSchema } from "../lib/appointment-schema";
 import { cancelAppointment as cancelTursoAppointment } from "../../lib/appointments";
+import { tenantId } from "../lib/tenant";
 
 export default defineTool({
   description:
@@ -16,7 +17,7 @@ export default defineTool({
     start: () => "Solicitando cancelamento do compromisso",
     complete: (_input, output) => `Cancelamento concluído: ${output.appointment.title}`,
   },
-  async execute({ id, reason }) {
-    return { appointment: await cancelTursoAppointment(id, reason) };
+  async execute({ id, reason }, ctx) {
+    return { appointment: await cancelTursoAppointment(tenantId(ctx), id, reason) };
   },
 });

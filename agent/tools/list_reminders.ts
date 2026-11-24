@@ -1,6 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 import { listReminders } from "../../lib/reminders";
+import { tenantId } from "../lib/tenant";
 
 export default defineTool({
   description:
@@ -27,8 +28,8 @@ export default defineTool({
       .optional()
       .describe("Máximo de lembretes (padrão: 20)."),
   }),
-  async execute(input) {
-    const reminders = await listReminders(input);
+  async execute(input, ctx) {
+    const reminders = await listReminders(tenantId(ctx), input);
     return { count: reminders.length, reminders };
   },
 });

@@ -51,16 +51,17 @@ function clampLimit(limit: number | undefined, fallback = 20): number {
   return Math.min(Math.max(Math.trunc(limit), 1), 50);
 }
 
-export async function projectExists(id: string): Promise<boolean> {
+export async function projectExists(tenantId: string, id: string): Promise<boolean> {
   const result = await getDb().execute({
-    sql: "SELECT 1 FROM projects WHERE id = ?",
-    args: [id],
+    sql: "SELECT 1 FROM projects WHERE tenant_id = ? AND id = ?",
+    args: [tenantId, id],
   });
 
   return result.rows.length > 0;
 }
 
 export async function createProject(
+  tenantId: string,
   input: CreateProjectInput,
 ): Promise<Project> {
   const name = input.name.trim();
@@ -73,10 +74,12 @@ export async function createProject(
   const at = nowIso();
 
   await getDb().execute({
-    sql: `INSERT INTO projects (id, name, description, status, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?)`,
+    sql: `INSERT INTO projects
+            (id, tenant_id, name, description, status, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?)`,
     args: [
       id,
+      tenantId,
       name,
       input.description?.trim() || null,
       input.status ?? "active",
@@ -85,7 +88,7 @@ export async function createProject(
     ],
   });
 
-  const project = await getProject(id);
+  const project = await getProject(tenantId, id);
 
   if (!project) {
     throw new Error("Projeto não encontrado após a criação.");
@@ -94,10 +97,10 @@ export async function createProject(
   return project;
 }
 
-export async function getProject(id: string): Promise<Project | null> {
+export async function getProject(tenantId: string, id: string): Promise<Project | null> {
   const result = await getDb().execute({
-    sql: "SELECT * FROM projects WHERE id = ?",
-    args: [id],
+    sql: "SELECT * FROM projects WHERE tenant_id = ? AND id = ?",
+    args: [tenantId, id],
   });
 
   const row = result.rows[0];
@@ -106,14 +109,19 @@ export async function getProject(id: string): Promise<Project | null> {
 }
 
 export async function listProjects(
+  tenantId: string,
   filters: ListProjectsFilters = {},
 ): Promise<ProjectWithCounts[]> {
   const conditions: string[] = [];
   const args: (string | number)[] = [];
 
   if (filters.status) {
-    conditions.push("p.status = ?");
+    conditions.push("p.tenant_id = ? AND p.status = ?");
+    args.push(tenantId);
     args.push(filters.status);
+  } else {
+    conditions.push("p.tenant_id = ?");
+    args.push(tenantId);
   }
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
@@ -140,6 +148,7 @@ export async function listProjects(
 }
 
 export async function updateProject(
+  tenantId: string,
   id: string,
   patch: UpdateProjectInput,
 ): Promise<Project> {
@@ -168,7 +177,7 @@ export async function updateProject(
   }
 
   if (sets.length === 0) {
-    const current = await getProject(id);
+    const current = await getProject(tenantId, id);
 
     if (!current) {
       throw new Error("Projeto não encontrado.");
@@ -182,15 +191,15 @@ export async function updateProject(
   args.push(id);
 
   const result = await getDb().execute({
-    sql: `UPDATE projects SET ${sets.join(", ")} WHERE id = ?`,
-    args,
+    sql: `UPDATE projects SET ${sets.join(", ")} WHERE tenant_id = ? AND id = ?`,
+    args: [...args.slice(0, -1), tenantId, id],
   });
 
   if (result.rowsAffected === 0) {
     throw new Error("Projeto não encontrado.");
   }
 
-  const project = await getProject(id);
+  const project = await getProject(tenantId, id);
 
   if (!project) {
     throw new Error("Projeto não encontrado.");
@@ -199,21 +208,21 @@ export async function updateProject(
   return project;
 }
 
-export async function deleteProject(id: string): Promise<void> {
+export async function deleteProject(tenantId: string, id: string): Promise<void> {
   const db = getDb();
 
   await db.execute({
-    sql: "UPDATE tasks SET project_id = NULL WHERE project_id = ?",
-    args: [id],
+    sql: "UPDATE tasks SET project_id = NULL WHERE tenant_id = ? AND project_id = ?",
+    args: [tenantId, id],
   });
   await db.execute({
-    sql: "UPDATE entries SET project_id = NULL WHERE project_id = ?",
-    args: [id],
+    sql: "UPDATE entries SET project_id = NULL WHERE tenant_id = ? AND project_id = ?",
+    args: [tenantId, id],
   });
 
   const result = await db.execute({
-    sql: "DELETE FROM projects WHERE id = ?",
-    args: [id],
+    sql: "DELETE FROM projects WHERE tenant_id = ? AND id = ?",
+    args: [tenantId, id],
   });
 
   if (result.rowsAffected === 0) {

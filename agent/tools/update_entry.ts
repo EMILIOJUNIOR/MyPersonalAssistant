@@ -1,6 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 import { updateEntry, type EntryStatus } from "../../lib/entries";
+import { tenantId } from "../lib/tenant";
 
 const STATUSES = ["active", "archived"] as const satisfies readonly EntryStatus[];
 
@@ -23,8 +24,8 @@ export default defineTool({
       .optional()
       .describe("active mantém visível; archived tira das buscas padrão."),
   }),
-  async execute(input) {
-    const entry = await updateEntry(input.entry_id, {
+  async execute(input, ctx) {
+    const entry = await updateEntry(tenantId(ctx), input.entry_id, {
       title: input.title,
       content: input.content,
       tags: input.tags,

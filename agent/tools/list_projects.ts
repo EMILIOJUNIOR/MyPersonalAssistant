@@ -1,6 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 import { listProjects, type ProjectStatus } from "../../lib/projects";
+import { tenantId } from "../lib/tenant";
 
 const STATUSES = [
   "active",
@@ -22,8 +23,8 @@ export default defineTool({
       .optional()
       .describe("Máximo de projetos (padrão: 20)."),
   }),
-  async execute(input) {
-    const projects = await listProjects(input);
+  async execute(input, ctx) {
+    const projects = await listProjects(tenantId(ctx), input);
     return { count: projects.length, projects };
   },
 });

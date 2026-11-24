@@ -144,13 +144,13 @@ function escapeLike(value: string): string {
   return value.replace(/[\\%_]/g, (char) => `\\${char}`);
 }
 
-async function assertProject(projectId: string): Promise<void> {
-  if (!(await projectExists(projectId))) {
+async function assertProject(tenantId: string, projectId: string): Promise<void> {
+  if (!(await projectExists(tenantId, projectId))) {
     throw new Error("Projeto não encontrado. Crie o projeto antes de vincular.");
   }
 }
 
-export async function createEntry(input: CreateEntryInput): Promise<Entry> {
+export async function createEntry(tenantId: string, input: CreateEntryInput): Promise<Entry> {
   const title = input.title.trim();
   const content = input.content.trim();
 
@@ -163,7 +163,7 @@ export async function createEntry(input: CreateEntryInput): Promise<Entry> {
   }
 
   if (input.project_id) {
-    await assertProject(input.project_id);
+    await assertProject(tenantId, input.project_id);
   }
 
   const id = randomUUID();
@@ -171,10 +171,11 @@ export async function createEntry(input: CreateEntryInput): Promise<Entry> {
 
   await getDb().execute({
     sql: `INSERT INTO entries
-            (id, kind, title, content, tags, project_id, status, metadata, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, 'active', ?, ?, ?)`,
+            (id, tenant_id, kind, title, content, tags, project_id, status, metadata, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?)`,
     args: [
       id,
+      tenantId,
       input.kind,
       title,
       content,
@@ -186,7 +187,7 @@ export async function createEntry(input: CreateEntryInput): Promise<Entry> {
     ],
   });
 
-  const entry = await getEntry(id);
+  const entry = await getEntry(tenantId, id);
 
   if (!entry) {
     throw new Error("Entrada não encontrada após a criação.");
@@ -195,10 +196,10 @@ export async function createEntry(input: CreateEntryInput): Promise<Entry> {
   return entry;
 }
 
-export async function getEntry(id: string): Promise<Entry | null> {
+export async function getEntry(tenantId: string, id: string): Promise<Entry | null> {
   const result = await getDb().execute({
-    sql: "SELECT * FROM entries WHERE id = ?",
-    args: [id],
+    sql: "SELECT * FROM entries WHERE tenant_id = ? AND id = ?",
+    args: [tenantId, id],
   });
 
   const row = result.rows[0];
@@ -207,6 +208,7 @@ export async function getEntry(id: string): Promise<Entry | null> {
 }
 
 export async function getEntryWithLinks(
+  tenantId: string,
   id: string,
 ): Promise<{ entry: EntryWithProject; links: EntryLinkView[] } | null> {
   const db = getDb();
@@ -214,8 +216,8 @@ export async function getEntryWithLinks(
     sql: `SELECT e.*, p.name AS project_name
           FROM entries e
           LEFT JOIN projects p ON p.id = e.project_id
-          WHERE e.id = ?`,
-    args: [id],
+           WHERE e.tenant_id = ? AND e.id = ?`,
+    args: [tenantId, id],
   });
 
   const row = result.rows[0];
@@ -237,9 +239,9 @@ export async function getEntryWithLinks(
               WHEN l.from_entry_id = ? THEN l.to_entry_id
               ELSE l.from_entry_id
             END
-          WHERE l.from_entry_id = ? OR l.to_entry_id = ?
+           WHERE e.tenant_id = ? AND (l.from_entry_id = ? OR l.to_entry_id = ?)
           ORDER BY l.created_at DESC`,
-    args: [id, id, id, id],
+    args: [id, id, tenantId, id, id],
   });
 
   const links = linksResult.rows.map((link) => ({
@@ -256,10 +258,11 @@ export async function getEntryWithLinks(
 }
 
 export async function searchEntries(
+  tenantId: string,
   filters: SearchEntriesFilters = {},
 ): Promise<SearchEntryResult[]> {
-  const conditions: string[] = ["1 = 1"];
-  const args: (string | number)[] = [];
+  const conditions: string[] = ["e.tenant_id = ?"];
+  const args: (string | number)[] = [tenantId];
 
   if (!filters.include_archived) {
     conditions.push("e.status = 'active'");
@@ -317,6 +320,7 @@ export async function searchEntries(
 }
 
 export async function updateEntry(
+  tenantId: string,
   id: string,
   patch: UpdateEntryInput,
 ): Promise<Entry> {
@@ -352,7 +356,7 @@ export async function updateEntry(
 
   if (patch.project_id !== undefined) {
     if (patch.project_id) {
-      await assertProject(patch.project_id);
+      await assertProject(tenantId, patch.project_id);
     }
 
     sets.push("project_id = ?");
@@ -365,7 +369,7 @@ export async function updateEntry(
   }
 
   if (sets.length === 0) {
-    const current = await getEntry(id);
+    const current = await getEntry(tenantId, id);
 
     if (!current) {
       throw new Error("Entrada não encontrada.");
@@ -379,15 +383,15 @@ export async function updateEntry(
   args.push(id);
 
   const result = await getDb().execute({
-    sql: `UPDATE entries SET ${sets.join(", ")} WHERE id = ?`,
-    args,
+    sql: `UPDATE entries SET ${sets.join(", ")} WHERE tenant_id = ? AND id = ?`,
+    args: [...args.slice(0, -1), tenantId, id],
   });
 
   if (result.rowsAffected === 0) {
     throw new Error("Entrada não encontrada.");
   }
 
-  const entry = await getEntry(id);
+  const entry = await getEntry(tenantId, id);
 
   if (!entry) {
     throw new Error("Entrada não encontrada.");
@@ -397,6 +401,7 @@ export async function updateEntry(
 }
 
 export async function linkEntries(
+  tenantId: string,
   fromEntryId: string,
   toEntryId: string,
   relation = "related",
@@ -408,8 +413,8 @@ export async function linkEntries(
   const normalizedRelation = relation.trim().slice(0, 40) || "related";
   const db = getDb();
   const existing = await db.execute({
-    sql: "SELECT id FROM entries WHERE id IN (?, ?)",
-    args: [fromEntryId, toEntryId],
+    sql: "SELECT id FROM entries WHERE tenant_id = ? AND id IN (?, ?)",
+    args: [tenantId, fromEntryId, toEntryId],
   });
 
   if (existing.rows.length !== 2) {
@@ -429,7 +434,7 @@ export async function linkEntries(
   } catch (error) {
     const duplicate = await db.execute({
       sql: `SELECT id, relation, created_at FROM entry_links
-            WHERE from_entry_id = ? AND to_entry_id = ? AND relation = ?`,
+             WHERE from_entry_id = ? AND to_entry_id = ? AND relation = ?`,
       args: [fromEntryId, toEntryId, normalizedRelation],
     });
 
@@ -450,7 +455,7 @@ export async function linkEntries(
     };
   }
 
-  const target = await getEntry(toEntryId);
+  const target = await getEntry(tenantId, toEntryId);
 
   return {
     id,
@@ -466,6 +471,7 @@ export async function linkEntries(
 }
 
 export async function recordDecision(
+  tenantId: string,
   input: RecordDecisionInput,
 ): Promise<{ entry: Entry; metadata: Record<string, unknown> }> {
   const content = [
@@ -491,7 +497,7 @@ export async function recordDecision(
     rationale: input.rationale?.trim() ?? null,
   };
 
-  const entry = await createEntry({
+  const entry = await createEntry(tenantId, {
     kind: "decision",
     title: input.title,
     content,
@@ -503,8 +509,10 @@ export async function recordDecision(
   return { entry, metadata };
 }
 
-export async function deleteEntry(id: string): Promise<void> {
+export async function deleteEntry(tenantId: string, id: string): Promise<void> {
   const db = getDb();
+  const current = await getEntry(tenantId, id);
+  if (!current) throw new Error("Entrada não encontrada.");
 
   await db.execute({
     sql: "DELETE FROM entry_links WHERE from_entry_id = ? OR to_entry_id = ?",
@@ -512,8 +520,8 @@ export async function deleteEntry(id: string): Promise<void> {
   });
 
   const result = await db.execute({
-    sql: "DELETE FROM entries WHERE id = ?",
-    args: [id],
+    sql: "DELETE FROM entries WHERE tenant_id = ? AND id = ?",
+    args: [tenantId, id],
   });
 
   if (result.rowsAffected === 0) {

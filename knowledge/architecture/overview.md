@@ -34,7 +34,7 @@ Turso (libSQL)                  tasks, reminders, projects, entries
 | Persona | `agent/instructions.md` | LumIA: segundo cérebro, rotina, estilo PT-BR e regras de tools. |
 | Tools | `agent/tools/*.ts` | 20 tools tipadas; validam entrada e chamam `lib/`. |
 | Canal eve | `agent/channels/eve.ts` | Acesso da TUI e de deployments via Vercel OIDC. |
-| Canal Telegram | `agent/channels/telegram.ts` | Conversa privada com allowlist; falha fechada. |
+| Canal Telegram | `agent/channels/telegram.ts` | Conversa privada multi-tenant; grupos falham fechados. |
 | Rota de áudio | `agent/channels/telegram-audio.ts` | Transcreve voz/áudio e encaminha o update como texto. |
 | Schedule | `agent/schedules/due-reminders.ts` | Cron a cada 15 minutos para lembretes vencidos. |
 | Domínio | `lib/*.ts` | Regras de tarefas, lembretes, projetos, entradas e tempo. |
@@ -47,7 +47,7 @@ Turso (libSQL)                  tasks, reminders, projects, entries
 
 1. O Telegram entrega o update em `/telegram/inbound`.
 2. A rota de áudio valida o secret e, como não há voz, encaminha sem alteração.
-3. O canal nativo verifica conversa privada e allowlist.
+3. O canal nativo verifica conversa privada e autentica o `message.from.id`.
 4. O agente escolhe uma tool; a tool chama `lib/`; `lib/` lê ou escreve no Turso.
 5. A resposta volta ao Telegram.
 
@@ -62,12 +62,12 @@ Turso (libSQL)                  tasks, reminders, projects, entries
 
 1. O cron `*/15 * * * *` executa `sendDueReminders()`.
 2. A função consulta lembretes vencidos com `sent_at IS NULL` e tarefa aberta.
-3. Envia a mensagem ao primeiro ID da allowlist e marca `sent_at`.
+3. Envia cada lembrete ao `tenant_id` correspondente e marca `sent_at`.
 4. Falhas são logadas e não interrompem os demais lembretes.
 
 # Limites e decisões
 
-- Um único usuário; a allowlist é obrigatória e falha fechada.
+- Cada usuário privado é um tenant isolado; grupos são rejeitados.
 - Telegram é a interface; não há frontend no v1.
 - O áudio não é persistido; ele é enviado ao Groq só no momento da transcrição.
 - O mesmo banco Turso é usado em local, preview e produção.

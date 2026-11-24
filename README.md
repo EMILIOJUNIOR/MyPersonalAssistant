@@ -88,7 +88,6 @@ Crie `.env.local` na raiz. Nunca versione esse arquivo.
 | `TURSO_AUTH_TOKEN` | Sim, remoto | Token do Turso |
 | `TELEGRAM_BOT_TOKEN` | Sim, Telegram | Token do Bot API |
 | `TELEGRAM_BOT_USERNAME` | Sim, Telegram | Username do bot |
-| `TELEGRAM_ALLOWED_USER_ID` | Sim, Telegram | IDs autorizados, separados por vírgula |
 | `TELEGRAM_WEBHOOK_SECRET_TOKEN` | Sim, Telegram | Segredo do webhook |
 | `GROQ_API_KEY` | Só áudio | Transcrição de voz |
 | `MYPROJECT_ROOT` | Opcional | Pasta que contém projetos de código |
@@ -168,7 +167,7 @@ O endpoint do webhook é:
 /telegram/inbound
 ```
 
-O canal aceita somente conversas privadas e usuários presentes em `TELEGRAM_ALLOWED_USER_ID`. O webhook valida `TELEGRAM_WEBHOOK_SECRET_TOKEN`. Grupos e usuários não autorizados falham de forma fechada.
+O canal aceita somente conversas privadas. Cada `message.from.id` identifica o `tenantId` e todos os dados do usuário são filtrados por esse valor no Turso. O webhook valida `TELEGRAM_WEBHOOK_SECRET_TOKEN`; grupos, supergrupos e canais falham de forma fechada.
 
 Para configurar em produção:
 
@@ -187,7 +186,7 @@ enviando o mesmo `secret_token` configurado no ambiente.
 
 ### Descobrir o ID autorizado
 
-O `TELEGRAM_ALLOWED_USER_ID` é o número `message.from.id` do usuário. Se os bots auxiliares não responderem, capture-o temporariamente pelo Bot API:
+O `message.from.id` identifica a conta Telegram. Se os bots auxiliares não responderem, capture-o temporariamente pelo Bot API:
 
 ```powershell
 node --env-file=.env.local --input-type=module -e "const r=await fetch('https://api.telegram.org/bot'+process.env.TELEGRAM_BOT_TOKEN+'/deleteWebhook',{method:'POST'}); console.log(await r.json())"
@@ -199,7 +198,7 @@ Envie `/start` ao bot e consulte:
 node --env-file=.env.local --input-type=module -e "const r=await fetch('https://api.telegram.org/bot'+process.env.TELEGRAM_BOT_TOKEN+'/getUpdates'); const b=await r.json(); console.log(JSON.stringify(b.result?.map(x=>({user_id:x.message?.from?.id,username:x.message?.from?.username})),null,2))"
 ```
 
-Depois coloque o `user_id` em `TELEGRAM_ALLOWED_USER_ID`, atualize a variável Production da Vercel, rode `npx eve deploy --non-interactive --yes` e restaure o webhook. O passo completo está em `knowledge/integrations/telegram.md`.
+Depois restaure o webhook. O passo completo está em `knowledge/integrations/telegram.md`.
 
 ## Lembretes automáticos
 
@@ -228,7 +227,7 @@ Comece por `knowledge/index.md`. Os principais documentos são:
 
 - Segredos ficam apenas em `.env.local` e nas variáveis da Vercel.
 - O webhook do Telegram exige segredo.
-- O Telegram usa allowlist e somente chats privados.
+- O Telegram aceita somente chats privados e isola os dados por `message.from.id`.
 - SQL usa parâmetros; entradas não são interpoladas.
 - Exclusão de tarefas exige aprovação.
 - Arquivos sensíveis e diretórios internos são bloqueados pelas ferramentas de workspace.

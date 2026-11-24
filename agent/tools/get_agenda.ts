@@ -1,6 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 import { getAgenda } from "../../lib/reminders";
+import { tenantId } from "../lib/tenant";
 
 export default defineTool({
   description:
@@ -23,7 +24,7 @@ export default defineTool({
       .optional()
       .describe("Inclui compromissos e tarefas já passados; só use quando o usuário pedir explicitamente."),
   }),
-  async execute(input) {
-    return getAgenda(input.from, input.to, input.include_done, input.include_past);
+  async execute(input, ctx) {
+    return getAgenda(tenantId(ctx), input.from, input.to, input.include_done, input.include_past);
   },
 });

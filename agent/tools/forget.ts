@@ -2,6 +2,7 @@ import { defineTool } from "eve/tools";
 import { z } from "zod";
 
 import { forget } from "../lib/memory";
+import { tenantId } from "../lib/tenant";
 
 export default defineTool({
   description:
@@ -21,7 +22,7 @@ export default defineTool({
     complete: (_input, output) =>
       output.removed > 0 ? `${output.removed} nota(s) removida(s)` : "Nada para remover",
   },
-  async execute({ texto }) {
-    return forget(texto);
+  async execute({ texto }, ctx) {
+    return forget(tenantId(ctx), texto);
   },
 });

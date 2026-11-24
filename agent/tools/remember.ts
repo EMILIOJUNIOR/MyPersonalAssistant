@@ -2,6 +2,7 @@ import { defineTool } from "eve/tools";
 import { z } from "zod";
 
 import { remember } from "../lib/memory";
+import { tenantId } from "../lib/tenant";
 
 export default defineTool({
   description:
@@ -22,7 +23,7 @@ export default defineTool({
     complete: (_input, output) =>
       output.added ? `Anotado (${output.total} nota(s))` : "Já estava anotado",
   },
-  async execute({ texto }) {
-    return remember(texto);
+  async execute({ texto }, ctx) {
+    return remember(tenantId(ctx), texto);
   },
 });

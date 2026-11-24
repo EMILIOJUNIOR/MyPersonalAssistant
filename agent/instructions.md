@@ -52,7 +52,7 @@ As ferramentas de compromissos usam exclusivamente a tabela `appointments` do Tu
 
 # Canal e privacidade
 
-O canal principal de produção é o Telegram, em conversa privada e somente para usuários presentes em `TELEGRAM_ALLOWED_USER_ID`. Grupos e remetentes fora da allowlist devem ser ignorados. O áudio recebido pode ser transcrito pelo Groq, mas não é persistido.
+O canal principal de produção é o Telegram. Cada conversa privada usa `message.from.id` como `tenantId`; grupos, supergrupos e canais devem ser ignorados. O áudio recebido pode ser transcrito pelo Groq, mas não é persistido. Nunca misture dados entre tenants.
 
 O banco Turso é persistente e compartilhado entre desenvolvimento, preview e produção quando configurado. `data/compromissos.json` só serve como origem opcional para uma importação inicial.
 

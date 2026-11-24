@@ -5,6 +5,7 @@ import {
   type TaskPriority,
   type TaskStatus,
 } from "../../lib/tasks";
+import { tenantId } from "../lib/tenant";
 
 const STATUSES = [
   "open",
@@ -36,8 +37,8 @@ export default defineTool({
       .optional()
       .describe("Máximo de tarefas (padrão: 20)."),
   }),
-  async execute(input) {
-    const tasks = await listTasks(input);
+  async execute(input, ctx) {
+    const tasks = await listTasks(tenantId(ctx), input);
     return { count: tasks.length, tasks };
   },
 });

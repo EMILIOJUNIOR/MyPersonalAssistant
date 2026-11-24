@@ -37,7 +37,7 @@ Tabela `reminders`:
 
 `agent/schedules/due-reminders.ts` roda `*/15 * * * *` e chama `sendDueReminders()`:
 
-1. Lê o primeiro ID da allowlist (`TELEGRAM_ALLOWED_USER_ID`).
+1. Usa o `tenant_id` do lembrete como `chat_id` do Telegram.
 2. `claimDueReminders(now, 20)` busca lembretes vencidos de tarefas abertas.
 3. Envia `⏰ Lembrete: <título>` com horário local.
 4. Marca `sent_at`; falhas são logadas e contabilizadas.
@@ -54,7 +54,7 @@ Tabela `reminders`:
 # Limites
 
 - Cron da Vercel Hobby pode atrasar até 15 minutos.
-- Sem `TELEGRAM_ALLOWED_USER_ID`, o envio falha com erro explícito.
+- Cada tenant recebe somente seus próprios lembretes.
 - Lembrete não é evento de calendário; não há integração externa.
 
 # Relações

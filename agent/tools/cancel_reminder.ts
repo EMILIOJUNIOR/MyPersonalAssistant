@@ -1,6 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 import { cancelReminder } from "../../lib/reminders";
+import { tenantId } from "../lib/tenant";
 
 export default defineTool({
   description:
@@ -8,8 +9,8 @@ export default defineTool({
   inputSchema: z.object({
     reminder_id: z.string().uuid().describe("ID do lembrete."),
   }),
-  async execute({ reminder_id }) {
-    await cancelReminder(reminder_id);
+  async execute({ reminder_id }, ctx) {
+    await cancelReminder(tenantId(ctx), reminder_id);
     return { id: reminder_id, cancelled: true };
   },
 });
