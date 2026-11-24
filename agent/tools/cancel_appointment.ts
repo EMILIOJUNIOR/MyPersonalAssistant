@@ -10,7 +10,7 @@ import {
 
 export default defineTool({
   description:
-    "Cancela um compromisso da agenda local. É um cancelamento reversível: o evento continua no arquivo com status 'cancelled' e pode ser reativado com update_appointment. Precisa do id, obtido com list_appointments.",
+    "Cancela um compromisso no Turso. É reversível: o evento continua na tabela appointments com status 'cancelled' e pode ser reativado com update_appointment. Precisa do id, obtido com list_appointments.",
   inputSchema: z.object({
     id: z.string().min(1),
     reason: z.string().optional().describe("Motivo do cancelamento, guardado nas notas."),
@@ -35,7 +35,7 @@ export default defineTool({
   },
   label: {
     start: () => "Solicitando cancelamento do compromisso",
-    complete: (_input, output) => `Cancelado: ${output.appointment.title}`,
+    complete: (_input, output) => `Cancelamento concluído: ${output.appointment.title}`,
   },
   async execute({ id, reason }) {
     return { appointment: await cancelTursoAppointment(id, reason) };
