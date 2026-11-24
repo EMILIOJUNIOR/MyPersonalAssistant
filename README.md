@@ -146,6 +146,19 @@ Instantes são armazenados em UTC. A conversão para `America/Sao_Paulo` ocorre 
 
 Nas consultas de agenda por semana ou mês, a LumIA oculta compromissos e tarefas já encerrados por padrão. Para consultar o histórico, peça explicitamente todos os itens ou os eventos passados.
 
+### Horários padrão de compromissos
+
+Quando o usuário não informar um horário:
+
+- Manhã: `08:00–12:00`.
+- Tarde: `13:30–18:00`.
+- Dia todo ou dia útil sem horário: dois compromissos, `08:00–12:00` e `13:30–18:00`, preservando o intervalo de almoço.
+- Almoço sem horário: `12:00–13:30`.
+
+Horários informados explicitamente pelo usuário sempre têm prioridade.
+
+Nomes de dias da semana são resolvidos dentro da janela domingo–domingo da semana indicada. A LumIA consulta `get_current_datetime` antes de calcular a data; “próxima semana” desloca a janela em sete dias.
+
 ## Telegram
 
 O endpoint do webhook é:
